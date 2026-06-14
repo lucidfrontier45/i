@@ -7,7 +7,7 @@ Manage globally-installed CLI tools across different ecosystems from a single co
 ## Features
 
 - **Unified workflow** — add, remove, list, sync, and upgrade tools regardless of their underlying package manager
-- **Multi-manager** — supports `cargo` (via `cargo-binstall`), `uv` (Python tools), and `bun` (JS/TS — WIP)
+- **Multi-manager** — supports `cargo` (via `cargo-binstall`), `uv` (Python tools), and `bun` (JS/TS)
 - **Declarative config** — installed packages tracked in `~/.i/packages.toml`
 - **Plugin drivers** — easy to extend with new package managers
 
@@ -23,7 +23,7 @@ go install github.com/lucidfrontier45/i@latest
 | :------ | :----------------------------------- |
 | `cargo` | [`cargo-binstall`](https://github.com/cargo-bins/cargo-binstall) |
 | `uv`    | [`uv`](https://docs.astral.sh/uv/)   |
-| `bun`   | [`bun`](https://bun.sh) (WIP)        |
+| `bun`   | [`bun`](https://bun.sh)                        |
 
 ## Usage
 
@@ -85,7 +85,7 @@ i upgrade <pkg> # upgrade a specific package
 | :------ | :------- | :----- | :------------------------ |
 | Cargo   | `cargo`  | ✅     | `cargo binstall`          |
 | uv      | `uv`     | ✅     | `uv tool install`         |
-| Bun     | `bun`    | 🚧 WIP | `bun add -g`              |
+| Bun     | `bun`    | ✅     | `bun i -g`                |
 
 ## How it works
 
