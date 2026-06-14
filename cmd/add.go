@@ -100,7 +100,7 @@ var addCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(addCmd)
-	addCmd.Flags().String("manager", "", "Package manager (bun, uv, cargo, grd)")
+	addCmd.Flags().String("manager", "", "Package manager (bun, uv, cargo, grd, go)")
 	_ = addCmd.MarkFlagRequired("manager")
 	addCmd.Flags().String("version", "", "Version to install")
 	addCmd.Flags().String("destination", "", "Destination directory (grd)")

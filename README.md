@@ -7,7 +7,7 @@ Manage globally-installed CLI tools across different ecosystems from a single co
 ## Features
 
 - **Unified workflow** — add, remove, list, sync, and upgrade tools regardless of their underlying package manager
-- **Multi-manager** — supports `cargo` (via `cargo-binstall`), `uv` (Python tools), `bun` (JS/TS), and `grd` (GitHub release binaries)
+- **Multi-manager** — supports `cargo` (via `cargo-binstall`), `uv` (Python tools), `bun` (JS/TS), `grd` (GitHub release binaries), and `go` (Go toolchain)
 - **Declarative config** — installed packages tracked in `~/.i/packages.toml`
 - **Plugin drivers** — easy to extend with new package managers
 
@@ -25,6 +25,7 @@ go install github.com/lucidfrontier45/i@latest
 | `uv`    | [`uv`](https://docs.astral.sh/uv/)   |
 | `bun`   | [`bun`](https://bun.sh)                        |
 | `grd`   | [`grd`](https://github.com/lucidfrontier45/grd) |
+| `go`    | [Go toolchain](https://go.dev/dl/)   |
 
 ## Usage
 
@@ -40,6 +41,7 @@ Install a package and register it in the config.
 i add starship --manager cargo
 i add ruff --manager uv --version 0.11.0
 i add lucidfrontier45/grd --manager grd
+i add golang.org/x/tools/gopls --manager go
 ```
 
 Some managers support features/extras using bracket syntax:
@@ -89,6 +91,7 @@ i upgrade <pkg> # upgrade a specific package
 | uv      | `uv`     | ✅     | `uv tool install`         |
 | Bun     | `bun`    | ✅     | `bun i -g`                |
 | grd     | `grd`    | ✅     | `grd`                     |
+| Go      | `go`     | ✅     | `go install pkg@version`  |
 
 ## How it works
 
