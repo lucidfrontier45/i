@@ -1,9 +1,12 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/lucidfrontier45/i/internal/config"
+	"github.com/lucidfrontier45/i/internal/manager"
+	"github.com/lucidfrontier45/i/internal/types"
 	"github.com/spf13/cobra"
 )
 
@@ -25,7 +28,17 @@ var removeCmd = &cobra.Command{
 		}
 
 		fmt.Printf("uninstalling %s (%s@%s)...\n", pkg, entry.Manager, entry.Version)
-		// TODO: invoke driver
+		drv := manager.Lookup(entry.Manager)
+		if drv == nil {
+			return fmt.Errorf("unknown manager %q", entry.Manager)
+		}
+		spec := types.PackageSpec{
+			Name:    pkg,
+			Manager: entry.Manager,
+		}
+		if err := drv.Remove(context.Background(), spec); err != nil {
+			return fmt.Errorf("uninstall %s: %w", pkg, err)
+		}
 
 		delete(cfg.Packages, pkg)
 
