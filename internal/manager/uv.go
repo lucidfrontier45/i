@@ -67,19 +67,12 @@ func (u *uvDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
 	return nil
 }
 
-func (u *uvDriver) Installed(ctx context.Context) (map[string]string, error) {
+func (u *uvDriver) InstalledVersion(ctx context.Context, pkg string) (string, error) {
 	out, err := exec.CommandContext(ctx, "uv", "tool", "list").CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("uv tool list: %w", err)
+		return "", fmt.Errorf("uv tool list: %w", err)
 	}
-	return parseUvToolList(string(out)), nil
-}
-
-func (u *uvDriver) InstalledVersion(ctx context.Context, pkg string) (string, error) {
-	installed, err := u.Installed(ctx)
-	if err != nil {
-		return "", err
-	}
+	installed := parseUvToolList(string(out))
 	return installed[pkg], nil
 }
 

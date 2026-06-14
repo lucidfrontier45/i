@@ -21,7 +21,5 @@ type Driver interface {
 
 	Remove(ctx context.Context, spec PackageSpec) error
 
-	Installed(ctx context.Context) (map[string]string, error)
-
 	InstalledVersion(ctx context.Context, pkg string) (string, error)
 }

@@ -85,22 +85,15 @@ func (c *cargoDriver) Remove(ctx context.Context, spec types.PackageSpec) error 
 	return nil
 }
 
-func (c *cargoDriver) Installed(ctx context.Context) (map[string]string, error) {
+func (c *cargoDriver) InstalledVersion(ctx context.Context, pkg string) (string, error) {
 	data, err := os.ReadFile(filepath.Join(cargoHome(), "binstall", "crates-v1.json"))
 	if err != nil {
 		if os.IsNotExist(err) {
-			return make(map[string]string), nil
+			return "", nil
 		}
-		return nil, fmt.Errorf("read binstall metadata: %w", err)
+		return "", fmt.Errorf("read binstall metadata: %w", err)
 	}
-	return parseBinstallCrates(data), nil
-}
-
-func (c *cargoDriver) InstalledVersion(ctx context.Context, pkg string) (string, error) {
-	installed, err := c.Installed(ctx)
-	if err != nil {
-		return "", err
-	}
+	installed := parseBinstallCrates(data)
 	return installed[pkg], nil
 }
 

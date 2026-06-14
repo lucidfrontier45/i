@@ -60,16 +60,6 @@ func (b *bunDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
 	return nil
 }
 
-func (b *bunDriver) Installed(ctx context.Context) (map[string]string, error) {
-	out, err := exec.CommandContext(
-		ctx, "bun", "pm", "-g", "list",
-	).CombinedOutput()
-	if err != nil {
-		return nil, fmt.Errorf("bun pm list: %w\n%s", err, string(out))
-	}
-	return parseBunGlobalList(string(out)), nil
-}
-
 func (b *bunDriver) InstalledVersion(ctx context.Context, pkg string) (string, error) {
 	out, err := exec.CommandContext(
 		ctx, "bun", "info", "-g", pkg, "version",
@@ -78,42 +68,4 @@ func (b *bunDriver) InstalledVersion(ctx context.Context, pkg string) (string, e
 		return "", nil
 	}
 	return strings.TrimSpace(string(out)), nil
-}
-
-// parseBunGlobalList parses "bun pm -g list" output.
-//
-// Input is a tree listing:
-//
-//	D:\toolchains\bun\install\global node_modules (496)
-//	├── pkg@1.0.0
-//	├── @scope/name@2.0.0
-//	└── last@3.0.0
-func parseBunGlobalList(output string) map[string]string {
-	result := make(map[string]string)
-	for _, line := range strings.Split(output, "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-		var pkgLine string
-		switch {
-		case strings.HasPrefix(line, "├── "):
-			pkgLine = line[4:]
-		case strings.HasPrefix(line, "└── "):
-			pkgLine = line[4:]
-		default:
-			continue
-		}
-		// Split on last '@' to handle scoped packages like @scope/name@1.0.0.
-		idx := strings.LastIndexByte(pkgLine, '@')
-		if idx == -1 {
-			continue
-		}
-		name := pkgLine[:idx]
-		version := pkgLine[idx+1:]
-		if name != "" && version != "" {
-			result[name] = version
-		}
-	}
-	return result
 }
