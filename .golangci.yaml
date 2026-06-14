@@ -3,10 +3,9 @@ formatters:
   enable:
     - golines
     - gofumpt
-    - swaggo
   settings:
     gofumpt:
-      module-path: your/module-path
+      module-path: github.com/lucidfrontier45/i
       extra-rules: true
 linters:
   default: standard

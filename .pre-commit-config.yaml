@@ -1,0 +1,10 @@
+repos:
+  - repo: local
+    hooks:
+      - id: golangci-lint-fmt 
+        name: golangci-lint fmt
+        entry: golangci-lint fmt
+        language: system
+        types: [go]
+        pass_filenames: false
+        always_run: true

@@ -2,9 +2,6 @@
 
 This project uses Go. AI agents must use **golangci-lint v2** for all code quality and formatting tasks.
 
-## 🛑 Strict Policy: No Commits
-**Do not perform any git commits, pushes, or version control actions.** Your responsibility ends at preparing the code changes and ensuring they pass all local checks. The human user will handle all commits.
-
 ## Setup Commands
 - **Initialize:** `go mod download`
 - **Maintenance:** `go mod tidy`
@@ -12,11 +9,10 @@ This project uses Go. AI agents must use **golangci-lint v2** for all code quali
 ## Code Quality & Formatting
 Use `golangci-lint` exclusively. Do not use standalone formatters.
 
-| Task        | Command                   | Description                              |
-| :---------- | :------------------------ | :--------------------------------------- |
-| **Check**   | `golangci-lint run`       | Runs all enabled linters and formatters. |
-| **Autofix** | `golangci-lint run --fix` | Applies linter fixes and formats code.   |
-| **Format**  | `golangci-lint fmt`       | Runs configured v2 formatters only.      |
+| Task        | Command                         | Description                              |
+| :---------- | :------------------------------ | :--------------------------------------- |
+| **Check&Autofix** | `golangci-lint run --fix` | Applies linter fixes and formats code.   |
+| **Format**  | `golangci-lint fmt`             | Runs configured v2 formatters only.      |
 
 ## Project Structure
 Detect the existing layout or request guidance for new projects:
