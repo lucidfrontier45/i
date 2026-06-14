@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/lucidfrontier45/i/internal/config"
 	"github.com/lucidfrontier45/i/internal/manager"
@@ -15,7 +16,12 @@ var addCmd = &cobra.Command{
 	Short: "Register a package to manage",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		pkg := args[0]
+		raw := args[0]
+
+		pkg, features := parseBracket(raw)
+		if pkg == "" {
+			return fmt.Errorf("invalid package name %q", raw)
+		}
 
 		mgr, _ := cmd.Flags().GetString("manager")
 		if mgr == "" {
@@ -39,23 +45,33 @@ var addCmd = &cobra.Command{
 			return fmt.Errorf("unknown manager %q", mgr)
 		}
 
-		spec := types.PackageSpec{Name: pkg, Version: version, Manager: mgr}
+		spec := types.PackageSpec{
+			Name:     pkg,
+			Version:  version,
+			Manager:  mgr,
+			Features: features,
+		}
 
 		if err := drv.Install(context.Background(), spec); err != nil {
 			return fmt.Errorf("install %s: %w", pkg, err)
 		}
 
+		lookupPkg := pkg
+		if len(features) > 0 {
+			lookupPkg = pkg + "[" + strings.Join(features, ",") + "]"
+		}
 		if installedVer, err := drv.InstalledVersion(
 			context.Background(),
-			pkg,
+			lookupPkg,
 		); err == nil &&
 			installedVer != "" {
 			version = installedVer
 		}
 
 		cfg.Packages[pkg] = config.PackageEntry{
-			Manager: mgr,
-			Version: version,
+			Manager:  mgr,
+			Version:  version,
+			Features: features,
 		}
 
 		_, err = config.Write(cfg)
@@ -73,4 +89,23 @@ func init() {
 	addCmd.Flags().String("manager", "", "Package manager (bun, uv, cargo)")
 	_ = addCmd.MarkFlagRequired("manager")
 	addCmd.Flags().String("version", "", "Version to install")
+}
+
+func parseBracket(raw string) (name string, features []string) {
+	idx := strings.IndexByte(raw, '[')
+	if idx == -1 {
+		return raw, nil
+	}
+	name = raw[:idx]
+	inner := raw[idx+1:]
+	if end := strings.IndexByte(inner, ']'); end != -1 {
+		inner = inner[:end]
+	}
+	for _, f := range strings.Split(inner, ",") {
+		f = strings.TrimSpace(f)
+		if f != "" {
+			features = append(features, f)
+		}
+	}
+	return name, features
 }

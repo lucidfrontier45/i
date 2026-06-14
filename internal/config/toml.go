@@ -7,9 +7,10 @@ import (
 )
 
 type PackageEntry struct {
-	Manager string         `toml:"manager"`
-	Version string         `toml:"version"`
-	Options map[string]any `toml:"options,omitempty"`
+	Manager  string         `toml:"manager"`
+	Version  string         `toml:"version"`
+	Features []string       `toml:"features,omitempty"`
+	Options  map[string]any `toml:"options,omitempty"`
 }
 
 type Config struct {

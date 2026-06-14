@@ -3,10 +3,11 @@ package types
 import "context"
 
 type PackageSpec struct {
-	Name    string
-	Manager string
-	Version string
-	Options map[string]any
+	Name     string
+	Manager  string
+	Version  string
+	Features []string
+	Options  map[string]any
 }
 
 type Driver interface {

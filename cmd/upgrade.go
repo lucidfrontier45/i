@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/lucidfrontier45/i/internal/config"
 	"github.com/lucidfrontier45/i/internal/manager"
@@ -38,9 +39,10 @@ var upgradeCmd = &cobra.Command{
 			}
 
 			spec := types.PackageSpec{
-				Name:    pkg,
-				Version: entry.Version,
-				Manager: entry.Manager,
+				Name:     pkg,
+				Version:  entry.Version,
+				Manager:  entry.Manager,
+				Features: entry.Features,
 			}
 
 			fmt.Printf("upgrading %s (%s)...\n", pkg, entry.Manager)
@@ -48,9 +50,13 @@ var upgradeCmd = &cobra.Command{
 				return fmt.Errorf("upgrade %s: %w", pkg, err)
 			}
 
+			lookupPkg := pkg
+			if len(entry.Features) > 0 {
+				lookupPkg = pkg + "[" + strings.Join(entry.Features, ",") + "]"
+			}
 			if installedVer, err := drv.InstalledVersion(
 				context.Background(),
-				pkg,
+				lookupPkg,
 			); err == nil && installedVer != "" &&
 				installedVer != entry.Version {
 				entry.Version = installedVer
@@ -74,9 +80,10 @@ var upgradeCmd = &cobra.Command{
 			}
 
 			spec := types.PackageSpec{
-				Name:    name,
-				Version: entry.Version,
-				Manager: entry.Manager,
+				Name:     name,
+				Version:  entry.Version,
+				Manager:  entry.Manager,
+				Features: entry.Features,
 			}
 
 			fmt.Printf("upgrading %s (%s)...\n", name, entry.Manager)
@@ -86,9 +93,13 @@ var upgradeCmd = &cobra.Command{
 				continue
 			}
 
+			lookupPkg := name
+			if len(entry.Features) > 0 {
+				lookupPkg = name + "[" + strings.Join(entry.Features, ",") + "]"
+			}
 			if installedVer, err := drv.InstalledVersion(
 				context.Background(),
-				name,
+				lookupPkg,
 			); err == nil && installedVer != "" &&
 				installedVer != entry.Version {
 				entry.Version = installedVer
