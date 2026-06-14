@@ -56,13 +56,9 @@ var addCmd = &cobra.Command{
 			return fmt.Errorf("install %s: %w", pkg, err)
 		}
 
-		lookupPkg := pkg
-		if len(features) > 0 {
-			lookupPkg = pkg + "[" + strings.Join(features, ",") + "]"
-		}
 		if installedVer, err := drv.InstalledVersion(
 			context.Background(),
-			lookupPkg,
+			pkg,
 		); err == nil &&
 			installedVer != "" {
 			version = installedVer

@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/lucidfrontier45/i/internal/config"
 	"github.com/lucidfrontier45/i/internal/manager"
@@ -50,13 +49,9 @@ var upgradeCmd = &cobra.Command{
 				return fmt.Errorf("upgrade %s: %w", pkg, err)
 			}
 
-			lookupPkg := pkg
-			if len(entry.Features) > 0 {
-				lookupPkg = pkg + "[" + strings.Join(entry.Features, ",") + "]"
-			}
 			if installedVer, err := drv.InstalledVersion(
 				context.Background(),
-				lookupPkg,
+				pkg,
 			); err == nil && installedVer != "" &&
 				installedVer != entry.Version {
 				entry.Version = installedVer
@@ -93,13 +88,9 @@ var upgradeCmd = &cobra.Command{
 				continue
 			}
 
-			lookupPkg := name
-			if len(entry.Features) > 0 {
-				lookupPkg = name + "[" + strings.Join(entry.Features, ",") + "]"
-			}
 			if installedVer, err := drv.InstalledVersion(
 				context.Background(),
-				lookupPkg,
+				name,
 			); err == nil && installedVer != "" &&
 				installedVer != entry.Version {
 				entry.Version = installedVer

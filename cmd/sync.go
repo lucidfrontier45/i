@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/lucidfrontier45/i/internal/config"
 	"github.com/lucidfrontier45/i/internal/manager"
@@ -56,13 +55,9 @@ var syncCmd = &cobra.Command{
 				continue
 			}
 
-			lookupPkg := name
-			if len(entry.Features) > 0 {
-				lookupPkg = name + "[" + strings.Join(entry.Features, ",") + "]"
-			}
 			if installedVer, err := drv.InstalledVersion(
 				context.Background(),
-				lookupPkg,
+				name,
 			); err == nil && installedVer != "" &&
 				installedVer != entry.Version {
 				entry.Version = installedVer
