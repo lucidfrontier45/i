@@ -35,7 +35,7 @@ func (c *cargoDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error
 	return nil
 }
 
-func (c *cargoDriver) Delete(ctx context.Context, spec types.PackageSpec) error {
+func (c *cargoDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
 	// TODO: exec cargo uninstall <pkg>
 	_ = ctx
 	_ = spec

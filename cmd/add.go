@@ -1,9 +1,12 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/lucidfrontier45/i/internal/config"
+	"github.com/lucidfrontier45/i/internal/manager"
+	"github.com/lucidfrontier45/i/internal/types"
 	"github.com/spf13/cobra"
 )
 
@@ -14,8 +17,8 @@ var addCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		pkg := args[0]
 
-		manager, _ := cmd.Flags().GetString("manager")
-		if manager == "" {
+		mgr, _ := cmd.Flags().GetString("manager")
+		if mgr == "" {
 			return fmt.Errorf("--manager is required")
 		}
 
@@ -31,8 +34,27 @@ var addCmd = &cobra.Command{
 			return fmt.Errorf("read config: %w", err)
 		}
 
+		drv := manager.Lookup(mgr)
+		if drv == nil {
+			return fmt.Errorf("unknown manager %q", mgr)
+		}
+
+		spec := types.PackageSpec{Name: pkg, Version: version, Manager: mgr}
+
+		if err := drv.Install(context.Background(), spec); err != nil {
+			return fmt.Errorf("install %s: %w", pkg, err)
+		}
+
+		if installedVer, err := drv.InstalledVersion(
+			context.Background(),
+			pkg,
+		); err == nil &&
+			installedVer != "" {
+			version = installedVer
+		}
+
 		cfg.Packages[pkg] = config.PackageEntry{
-			Manager: manager,
+			Manager: mgr,
 			Version: version,
 		}
 
@@ -41,7 +63,7 @@ var addCmd = &cobra.Command{
 			return fmt.Errorf("write config: %w", err)
 		}
 
-		fmt.Printf("added %s (manager: %s, version: %s) to %s\n", pkg, manager, version, path)
+		fmt.Printf("added %s (manager: %s, version: %s) to %s\n", pkg, mgr, version, path)
 		return nil
 	},
 }

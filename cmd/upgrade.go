@@ -1,9 +1,12 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/lucidfrontier45/i/internal/config"
+	"github.com/lucidfrontier45/i/internal/manager"
+	"github.com/lucidfrontier45/i/internal/types"
 	"github.com/spf13/cobra"
 )
 
@@ -28,18 +31,76 @@ var upgradeCmd = &cobra.Command{
 			if !ok {
 				return fmt.Errorf("package %q not found in config", pkg)
 			}
+
+			drv := manager.Lookup(entry.Manager)
+			if drv == nil {
+				return fmt.Errorf("unknown manager %q", entry.Manager)
+			}
+
+			spec := types.PackageSpec{
+				Name:    pkg,
+				Version: entry.Version,
+				Manager: entry.Manager,
+			}
+
 			fmt.Printf("upgrading %s (%s)...\n", pkg, entry.Manager)
-			// TODO: invoke driver
-			_ = entry
+			if err := drv.Upgrade(context.Background(), spec); err != nil {
+				return fmt.Errorf("upgrade %s: %w", pkg, err)
+			}
+
+			if installedVer, err := drv.InstalledVersion(
+				context.Background(),
+				pkg,
+			); err == nil && installedVer != "" &&
+				installedVer != entry.Version {
+				entry.Version = installedVer
+				cfg.Packages[pkg] = entry
+				if _, err := config.Write(cfg); err != nil {
+					return fmt.Errorf("write config: %w", err)
+				}
+			}
+
 			return nil
 		}
 
 		hasError := false
+		needsWrite := false
 		for name, entry := range cfg.Packages {
+			drv := manager.Lookup(entry.Manager)
+			if drv == nil {
+				fmt.Printf("error: unknown manager %q\n", entry.Manager)
+				hasError = true
+				continue
+			}
+
+			spec := types.PackageSpec{
+				Name:    name,
+				Version: entry.Version,
+				Manager: entry.Manager,
+			}
+
 			fmt.Printf("upgrading %s (%s)...\n", name, entry.Manager)
-			// TODO: invoke driver
-			_ = name
-			_ = entry
+			if err := drv.Upgrade(context.Background(), spec); err != nil {
+				fmt.Printf("error upgrading %s: %v\n", name, err)
+				hasError = true
+				continue
+			}
+
+			if installedVer, err := drv.InstalledVersion(
+				context.Background(),
+				name,
+			); err == nil && installedVer != "" &&
+				installedVer != entry.Version {
+				entry.Version = installedVer
+				cfg.Packages[name] = entry
+				needsWrite = true
+			}
+		}
+
+		if needsWrite {
+			if _, err := config.Write(cfg); err != nil {
+				return fmt.Errorf("write config: %w", err)
+			}
 		}
 
 		if hasError {

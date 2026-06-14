@@ -18,7 +18,7 @@ type Driver interface {
 
 	Upgrade(ctx context.Context, spec PackageSpec) error
 
-	Delete(ctx context.Context, spec PackageSpec) error
+	Remove(ctx context.Context, spec PackageSpec) error
 
 	Installed(ctx context.Context) (map[string]string, error)
 

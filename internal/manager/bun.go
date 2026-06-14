@@ -35,7 +35,7 @@ func (b *bunDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error {
 	return nil
 }
 
-func (b *bunDriver) Delete(ctx context.Context, spec types.PackageSpec) error {
+func (b *bunDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
 	// TODO: exec bun remove -g <pkg>
 	_ = ctx
 	_ = spec
