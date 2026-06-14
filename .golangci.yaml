@@ -1,0 +1,23 @@
+version: "2"
+formatters:
+  enable:
+    - golines
+    - gofumpt
+    - swaggo
+  settings:
+    gofumpt:
+      module-path: your/module-path
+      extra-rules: true
+linters:
+  default: standard
+  enable:
+    - revive
+    - copyloopvar
+    - unconvert
+    - nilnesserr
+    - intrange
+  settings:
+    revive:
+      severity: warning
+run:
+  timeout: 5m
