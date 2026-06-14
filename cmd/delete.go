@@ -1,0 +1,44 @@
+package cmd
+
+import (
+	"fmt"
+
+	"github.com/lucidfrontier45/i/internal/config"
+	"github.com/spf13/cobra"
+)
+
+var deleteCmd = &cobra.Command{
+	Use:   "delete <package>",
+	Short: "Uninstall and remove a package from management",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		pkg := args[0]
+
+		cfg, path, err := config.Read()
+		if err != nil {
+			return fmt.Errorf("read config: %w", err)
+		}
+
+		entry, ok := cfg.Packages[pkg]
+		if !ok {
+			return fmt.Errorf("package %q not found in config", pkg)
+		}
+
+		fmt.Printf("uninstalling %s (%s@%s)...\n", pkg, entry.Manager, entry.Version)
+		// TODO: invoke driver
+
+		delete(cfg.Packages, pkg)
+
+		_, err = config.Write(cfg)
+		if err != nil {
+			return fmt.Errorf("write config: %w", err)
+		}
+
+		fmt.Printf("removed %s from %s\n", pkg, path)
+		return nil
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(deleteCmd)
+}

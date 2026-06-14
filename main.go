@@ -1,7 +1,7 @@
 package main
 
-import "fmt"
+import "github.com/lucidfrontier45/i/cmd"
 
 func main() {
-	fmt.Println("Hello, World!")
+	cmd.Execute()
 }
