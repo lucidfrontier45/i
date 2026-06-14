@@ -39,14 +39,18 @@ var syncCmd = &cobra.Command{
 				continue
 			}
 
+			options := entry.Options
+			if forceSync {
+				options = copyOptions(options)
+				options["force"] = true
+			}
+
 			spec := types.PackageSpec{
 				Name:     name,
 				Version:  entry.Version,
 				Manager:  entry.Manager,
 				Features: entry.Features,
-			}
-			if forceSync {
-				spec.Options = map[string]any{"force": true}
+				Options:  options,
 			}
 
 			if err := drv.Install(context.Background(), spec); err != nil {
@@ -84,4 +88,17 @@ func init() {
 	rootCmd.AddCommand(syncCmd)
 	syncCmd.Flags().
 		BoolVarP(&forceSync, "force", "f", false, "Force reinstall even if already installed")
+}
+
+// copyOptions returns a shallow copy of m so callers can mutate it without
+// aliasing the original map (e.g. when injecting `force` during sync).
+func copyOptions(m map[string]any) map[string]any {
+	if m == nil {
+		return make(map[string]any)
+	}
+	out := make(map[string]any, len(m))
+	for k, v := range m {
+		out[k] = v
+	}
+	return out
 }

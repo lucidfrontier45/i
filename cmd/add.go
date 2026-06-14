@@ -29,6 +29,20 @@ var addCmd = &cobra.Command{
 		}
 
 		version, _ := cmd.Flags().GetString("version")
+		destination, _ := cmd.Flags().GetString("destination")
+		binName, _ := cmd.Flags().GetString("bin-name")
+		exclude, _ := cmd.Flags().GetString("exclude")
+
+		options := make(map[string]any)
+		if destination != "" {
+			options["destination"] = destination
+		}
+		if binName != "" {
+			options["bin-name"] = binName
+		}
+		if exclude != "" {
+			options["exclude"] = exclude
+		}
 
 		_, err := config.EnsureDir()
 		if err != nil {
@@ -50,6 +64,7 @@ var addCmd = &cobra.Command{
 			Version:  version,
 			Manager:  mgr,
 			Features: features,
+			Options:  options,
 		}
 
 		if err := drv.Install(context.Background(), spec); err != nil {
@@ -59,16 +74,19 @@ var addCmd = &cobra.Command{
 		if installedVer, err := drv.InstalledVersion(
 			context.Background(),
 			pkg,
-		); err == nil &&
-			installedVer != "" {
+		); err == nil && installedVer != "" {
 			version = installedVer
 		}
 
-		cfg.Packages[pkg] = config.PackageEntry{
+		entry := config.PackageEntry{
 			Manager:  mgr,
 			Version:  version,
 			Features: features,
 		}
+		if len(options) > 0 {
+			entry.Options = options
+		}
+		cfg.Packages[pkg] = entry
 
 		_, err = config.Write(cfg)
 		if err != nil {
@@ -82,9 +100,12 @@ var addCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(addCmd)
-	addCmd.Flags().String("manager", "", "Package manager (bun, uv, cargo)")
+	addCmd.Flags().String("manager", "", "Package manager (bun, uv, cargo, grd)")
 	_ = addCmd.MarkFlagRequired("manager")
 	addCmd.Flags().String("version", "", "Version to install")
+	addCmd.Flags().String("destination", "", "Destination directory (grd)")
+	addCmd.Flags().String("bin-name", "", "Override binary name (grd)")
+	addCmd.Flags().String("exclude", "", "Comma-separated asset-name substrings to exclude (grd)")
 }
 
 func parseBracket(raw string) (name string, features []string) {

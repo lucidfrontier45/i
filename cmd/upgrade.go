@@ -115,5 +115,5 @@ var upgradeCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(upgradeCmd)
-	upgradeCmd.Flags().String("manager", "", "Package manager (bun, uv, cargo)")
+	upgradeCmd.Flags().String("manager", "", "Package manager (bun, uv, cargo, grd)")
 }

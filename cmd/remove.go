@@ -35,6 +35,7 @@ var removeCmd = &cobra.Command{
 		spec := types.PackageSpec{
 			Name:    pkg,
 			Manager: entry.Manager,
+			Options: entry.Options,
 		}
 		if err := drv.Remove(context.Background(), spec); err != nil {
 			return fmt.Errorf("uninstall %s: %w", pkg, err)
