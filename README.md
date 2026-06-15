@@ -1,6 +1,6 @@
 # i
 
-**Global Installer Manager** — a uniform CLI interface to multiple package managers with global install features.
+A unified CLI interface to multiple package managers with global install features.
 
 Manage globally-installed CLI tools across different ecosystems from a single command.
 
@@ -17,15 +17,15 @@ Manage globally-installed CLI tools across different ecosystems from a single co
 go install github.com/lucidfrontier45/i@latest
 ```
 
-### Dependencies
+### Supported managers
 
-| Manager | Requirement                          |
-| :------ | :----------------------------------- |
-| `cargo` | [`cargo-binstall`](https://github.com/cargo-bins/cargo-binstall) |
-| `uv`    | [`uv`](https://docs.astral.sh/uv/)   |
-| `bun`   | [`bun`](https://bun.sh)                        |
-| `grd`   | [`grd`](https://github.com/lucidfrontier45/grd) |
-| `go`    | [Go toolchain](https://go.dev/dl/)   |
+| Manager | Requirement                                                       | Status | Command used              |
+| :------ | :---------------------------------------------------------------- | :----- | :------------------------ |
+| `cargo` | [`cargo-binstall`](https://github.com/cargo-bins/cargo-binstall) | ✅     | `cargo binstall`          |
+| `uv`    | [`uv`](https://docs.astral.sh/uv/)                                | ✅     | `uv tool install`         |
+| `bun`   | [`bun`](https://bun.sh)                                           | ✅     | `bun i -g`                |
+| `grd`   | [`grd`](https://github.com/lucidfrontier45/grd)                   | ✅     | `grd`                     |
+| `go`    | [Go toolchain](https://go.dev/dl/)                                | ✅     | `go install pkg@version`  |
 
 ## Usage
 
@@ -129,16 +129,6 @@ while running); the leftover is cleaned up on the next run.
 ```bash
 i version
 ```
-
-## Supported managers
-
-| Manager | Name     | Status | Command used              |
-| :------ | :------- | :----- | :------------------------ |
-| Cargo   | `cargo`  | ✅     | `cargo binstall`          |
-| uv      | `uv`     | ✅     | `uv tool install`         |
-| Bun     | `bun`    | ✅     | `bun i -g`                |
-| grd     | `grd`    | ✅     | `grd`                     |
-| Go      | `go`     | ✅     | `go install pkg@version`  |
 
 ## How it works
 
