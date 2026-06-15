@@ -37,8 +37,9 @@ var upgradeCmd = &cobra.Command{
 				return fmt.Errorf("unknown manager %q", entry.Manager)
 			}
 
+			upstream := entry.UpstreamName(pkg)
 			spec := types.PackageSpec{
-				Name:     pkg,
+				Name:     upstream,
 				Version:  entry.Version,
 				Manager:  entry.Manager,
 				Features: entry.Features,
@@ -52,7 +53,7 @@ var upgradeCmd = &cobra.Command{
 
 			if installedVer, err := drv.InstalledVersion(
 				context.Background(),
-				pkg,
+				upstream,
 			); err == nil && installedVer != "" &&
 				installedVer != entry.Version {
 				entry.Version = installedVer
@@ -75,8 +76,9 @@ var upgradeCmd = &cobra.Command{
 				continue
 			}
 
+			upstream := entry.UpstreamName(name)
 			spec := types.PackageSpec{
-				Name:     name,
+				Name:     upstream,
 				Version:  entry.Version,
 				Manager:  entry.Manager,
 				Features: entry.Features,
@@ -92,7 +94,7 @@ var upgradeCmd = &cobra.Command{
 
 			if installedVer, err := drv.InstalledVersion(
 				context.Background(),
-				name,
+				upstream,
 			); err == nil && installedVer != "" &&
 				installedVer != entry.Version {
 				entry.Version = installedVer

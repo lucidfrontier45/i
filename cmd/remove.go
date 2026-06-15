@@ -33,7 +33,7 @@ var removeCmd = &cobra.Command{
 			return fmt.Errorf("unknown manager %q", entry.Manager)
 		}
 		spec := types.PackageSpec{
-			Name:    pkg,
+			Name:    entry.UpstreamName(pkg),
 			Manager: entry.Manager,
 			Options: entry.Options,
 		}

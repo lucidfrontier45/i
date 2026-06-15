@@ -33,7 +33,7 @@ go install github.com/lucidfrontier45/i@latest
 ### Add a package
 
 ```bash
-i add <package> --manager <manager> [--version <version>]
+i add <package> --manager <manager> [--version <version>] [--alias <alias>]
 ```
 
 Install a package and register it in the config.
@@ -44,6 +44,18 @@ i add ruff --manager uv --version 0.11.0
 i add lucidfrontier45/grd --manager grd
 i add golang.org/x/tools/gopls --manager go
 i add typescript --manager npm --version 5.6.3
+```
+
+Use `--alias` (short `-a`) to register a package under a shorter or
+friendlier name. The alias becomes the key used by `upgrade`, `remove`,
+`list`, and `sync`; the full package name is what gets passed to the
+package manager. If `--alias` is omitted, the package name is used as the
+alias:
+
+```bash
+i add @user/package --manager bun --alias mypkg
+i upgrade mypkg
+i remove mypkg
 ```
 
 Some managers support features/extras using bracket syntax:
@@ -138,8 +150,9 @@ Each package manager implements the `types.Driver` interface (`internal/types/pa
 
 ```toml
 [packages]
-starship = { manager = "cargo", version = "1.22.1" }
-ruff = { manager = "uv", version = "0.11.0" }
+starship = { manager = "cargo", version = "1.22.1", package = "starship" }
+ruff = { manager = "uv", version = "0.11.0", package = "ruff" }
+mypkg = { manager = "bun", version = "1.0.0", package = "@user/package" }
 ```
 
 ## Extending

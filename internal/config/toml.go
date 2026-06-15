@@ -9,8 +9,19 @@ import (
 type PackageEntry struct {
 	Manager  string         `toml:"manager"`
 	Version  string         `toml:"version"`
+	Package  string         `toml:"package"`
 	Features []string       `toml:"features,omitempty"`
 	Options  map[string]any `toml:"options,omitempty"`
+}
+
+// UpstreamName returns the upstream package name to pass to a driver.
+// Falls back to fallback when Package is empty (e.g. legacy configs written
+// before the --alias feature was added).
+func (e PackageEntry) UpstreamName(fallback string) string {
+	if e.Package != "" {
+		return e.Package
+	}
+	return fallback
 }
 
 type Config struct {

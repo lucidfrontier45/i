@@ -29,6 +29,7 @@ var addCmd = &cobra.Command{
 		}
 
 		version, _ := cmd.Flags().GetString("version")
+		aliasFlag, _ := cmd.Flags().GetString("alias")
 		destination, _ := cmd.Flags().GetString("destination")
 		binName, _ := cmd.Flags().GetString("bin-name")
 		exclude, _ := cmd.Flags().GetString("exclude")
@@ -59,6 +60,14 @@ var addCmd = &cobra.Command{
 			return fmt.Errorf("unknown manager %q", mgr)
 		}
 
+		alias := pkg
+		if aliasFlag != "" {
+			alias = aliasFlag
+		}
+		if _, exists := cfg.Packages[alias]; exists {
+			return fmt.Errorf("package alias %q already registered", alias)
+		}
+
 		spec := types.PackageSpec{
 			Name:     pkg,
 			Version:  version,
@@ -81,19 +90,20 @@ var addCmd = &cobra.Command{
 		entry := config.PackageEntry{
 			Manager:  mgr,
 			Version:  version,
+			Package:  pkg,
 			Features: features,
 		}
 		if len(options) > 0 {
 			entry.Options = options
 		}
-		cfg.Packages[pkg] = entry
+		cfg.Packages[alias] = entry
 
 		_, err = config.Write(cfg)
 		if err != nil {
 			return fmt.Errorf("write config: %w", err)
 		}
 
-		fmt.Printf("added %s (manager: %s, version: %s) to %s\n", pkg, mgr, version, path)
+		fmt.Printf("added %s (manager: %s, version: %s) to %s\n", alias, mgr, version, path)
 		return nil
 	},
 }
@@ -103,6 +113,8 @@ func init() {
 	addCmd.Flags().String("manager", "", "Package manager (bun, uv, cargo, grd, go, npm)")
 	_ = addCmd.MarkFlagRequired("manager")
 	addCmd.Flags().String("version", "", "Version to install")
+	addCmd.Flags().
+		StringP("alias", "a", "", "Alias name to register the package under (defaults to the package name)")
 	addCmd.Flags().String("destination", "", "Destination directory (grd)")
 	addCmd.Flags().String("bin-name", "", "Override binary name (grd)")
 	addCmd.Flags().String("exclude", "", "Comma-separated asset-name substrings to exclude (grd)")
