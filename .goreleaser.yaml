@@ -11,6 +11,11 @@ builds:
     binary: i
     env:
       - CGO_ENABLED=0
+    ldflags:
+      - -s -w
+      - -X github.com/lucidfrontier45/i/cmd.Version={{.Version}}
+      - -X github.com/lucidfrontier45/i/cmd.Commit={{.Commit}}
+      - -X github.com/lucidfrontier45/i/cmd.Date={{.Date}}
     goos:
       - linux
       - windows
