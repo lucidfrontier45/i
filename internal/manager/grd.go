@@ -23,11 +23,6 @@ func (g *grdDriver) Detect() bool {
 	return exec.Command("grd", "--version").Run() == nil
 }
 
-// grdListLineFormat is the per-line shape of `grd --list-installed` stdout:
-//
-//	"<repo> (tag: <tag>, asset: <asset>)"
-const grdListLinePrefix = " (tag: "
-
 func (g *grdDriver) Install(ctx context.Context, spec types.PackageSpec) error {
 	args := []string{spec.Name, "-y"}
 	if spec.Version != "" {
@@ -60,7 +55,7 @@ func (g *grdDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error {
 }
 
 func (g *grdDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
-	args := []string{spec.Name, "--remove"}
+	args := []string{"remove", spec.Name}
 	if dst, ok := spec.Options["destination"].(string); ok && dst != "" {
 		args = append(args, "--destination", dst)
 	}
@@ -75,11 +70,11 @@ func (g *grdDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
 }
 
 func (g *grdDriver) InstalledVersion(ctx context.Context, pkg string) (string, error) {
-	out, err := exec.CommandContext(ctx, "grd", "--list-installed").CombinedOutput()
+	out, err := exec.CommandContext(ctx, "grd", "info", pkg).CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("grd --list-installed: %w", err)
+		return "", fmt.Errorf("grd info %s: %w", pkg, err)
 	}
-	return parseGrdListInstalled(string(out), pkg), nil
+	return parseGrdInfo(string(out)), nil
 }
 
 // appendCommonFlags adds destination, bin-name, and exclude from options
@@ -96,24 +91,14 @@ func (g *grdDriver) appendCommonFlags(args *[]string, opts map[string]any) {
 	}
 }
 
-// parseGrdListInstalled scans grd --list-installed stdout for the entry
-// matching pkg and returns its tag. Returns "" when the package is absent
-// or the output is empty.
-func parseGrdListInstalled(output, pkg string) string {
-	for _, line := range strings.Split(output, "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" || line == "No installed packages found." {
-			continue
+// parseGrdInfo extracts the tag from `grd info <pkg>` output.
+// Output format: repo=owner/repo;tag=v1.0.0;asset=...;destination=...;binary=...;binary_exists=true
+func parseGrdInfo(output string) string {
+	for _, field := range strings.Split(strings.TrimSpace(output), ";") {
+		kv := strings.SplitN(field, "=", 2)
+		if len(kv) == 2 && kv[0] == "tag" {
+			return kv[1]
 		}
-		if !strings.HasPrefix(line, pkg+grdListLinePrefix) {
-			continue
-		}
-		rest := line[len(pkg)+len(grdListLinePrefix):]
-		end := strings.Index(rest, ",")
-		if end == -1 {
-			return ""
-		}
-		return strings.TrimSpace(rest[:end])
 	}
 	return ""
 }
