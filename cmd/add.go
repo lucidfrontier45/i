@@ -29,6 +29,7 @@ var addCmd = &cobra.Command{
 		}
 
 		version, _ := cmd.Flags().GetString("version")
+		aliasFlag, _ := cmd.Flags().GetString("alias")
 		destination, _ := cmd.Flags().GetString("destination")
 		binName, _ := cmd.Flags().GetString("bin-name")
 		exclude, _ := cmd.Flags().GetString("exclude")
@@ -57,6 +58,48 @@ var addCmd = &cobra.Command{
 		drv := manager.Lookup(mgr)
 		if drv == nil {
 			return fmt.Errorf("unknown manager %q", mgr)
+		}
+
+		if existing, exists := cfg.Packages[pkg]; exists {
+			if aliasFlag == "" {
+				return fmt.Errorf("package %q already registered", pkg)
+			}
+
+			cfg.Index[aliasFlag] = pkg
+
+			if version != "" && version != existing.Version {
+				spec := types.PackageSpec{
+					Name:     pkg,
+					Version:  version,
+					Manager:  mgr,
+					Features: features,
+					Options:  options,
+				}
+				if err := drv.Install(context.Background(), spec); err != nil {
+					return fmt.Errorf("install %s: %w", pkg, err)
+				}
+
+				if installedVer, err := drv.InstalledVersion(
+					context.Background(),
+					pkg,
+				); err == nil && installedVer != "" {
+					version = installedVer
+				}
+
+				existing.Version = version
+				existing.Features = features
+				if len(options) > 0 {
+					existing.Options = options
+				}
+				cfg.Packages[pkg] = existing
+			}
+
+			if _, err := config.Write(cfg); err != nil {
+				return fmt.Errorf("write config: %w", err)
+			}
+
+			fmt.Printf("added alias %s -> %s (manager: %s) to %s\n", aliasFlag, pkg, mgr, path)
+			return nil
 		}
 
 		spec := types.PackageSpec{
@@ -88,12 +131,18 @@ var addCmd = &cobra.Command{
 		}
 		cfg.Packages[pkg] = entry
 
+		display := pkg
+		if aliasFlag != "" {
+			cfg.Index[aliasFlag] = pkg
+			display = aliasFlag
+		}
+
 		_, err = config.Write(cfg)
 		if err != nil {
 			return fmt.Errorf("write config: %w", err)
 		}
 
-		fmt.Printf("added %s (manager: %s, version: %s) to %s\n", pkg, mgr, version, path)
+		fmt.Printf("added %s (manager: %s, version: %s) to %s\n", display, mgr, version, path)
 		return nil
 	},
 }
@@ -103,6 +152,8 @@ func init() {
 	addCmd.Flags().String("manager", "", "Package manager (bun, uv, cargo, grd, go, npm)")
 	_ = addCmd.MarkFlagRequired("manager")
 	addCmd.Flags().String("version", "", "Version to install")
+	addCmd.Flags().
+		StringP("alias", "a", "", "Alias name to register the package under (defaults to the package name)")
 	addCmd.Flags().String("destination", "", "Destination directory (grd)")
 	addCmd.Flags().String("bin-name", "", "Override binary name (grd)")
 	addCmd.Flags().String("exclude", "", "Comma-separated asset-name substrings to exclude (grd)")

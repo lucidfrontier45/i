@@ -15,40 +15,46 @@ var removeCmd = &cobra.Command{
 	Short: "Uninstall and remove a package from management",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		pkg := args[0]
+		key := args[0]
 
 		cfg, path, err := config.Read()
 		if err != nil {
 			return fmt.Errorf("read config: %w", err)
 		}
 
-		entry, ok := cfg.Packages[pkg]
+		full := cfg.ResolveName(key)
+		entry, ok := cfg.Packages[full]
 		if !ok {
-			return fmt.Errorf("package %q not found in config", pkg)
+			return fmt.Errorf("package %q not found in config", key)
 		}
 
-		fmt.Printf("uninstalling %s (%s@%s)...\n", pkg, entry.Manager, entry.Version)
+		fmt.Printf("uninstalling %s (%s@%s)...\n", full, entry.Manager, entry.Version)
 		drv := manager.Lookup(entry.Manager)
 		if drv == nil {
 			return fmt.Errorf("unknown manager %q", entry.Manager)
 		}
 		spec := types.PackageSpec{
-			Name:    pkg,
+			Name:    full,
 			Manager: entry.Manager,
 			Options: entry.Options,
 		}
 		if err := drv.Remove(context.Background(), spec); err != nil {
-			return fmt.Errorf("uninstall %s: %w", pkg, err)
+			return fmt.Errorf("uninstall %s: %w", full, err)
 		}
 
-		delete(cfg.Packages, pkg)
+		delete(cfg.Packages, full)
+		for a, f := range cfg.Index {
+			if f == full {
+				delete(cfg.Index, a)
+			}
+		}
 
 		_, err = config.Write(cfg)
 		if err != nil {
 			return fmt.Errorf("write config: %w", err)
 		}
 
-		fmt.Printf("removed %s from %s\n", pkg, path)
+		fmt.Printf("removed %s from %s\n", key, path)
 		return nil
 	},
 }
