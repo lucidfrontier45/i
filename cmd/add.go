@@ -18,18 +18,24 @@ var addCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		raw := args[0]
 
-		pkg, features := parseBracket(raw)
-		if pkg == "" {
+		pkgStr, features := parseBracket(raw)
+		if pkgStr == "" {
 			return fmt.Errorf("invalid package name %q", raw)
 		}
+		pkg := types.PackageName(pkgStr)
 
-		mgr, _ := cmd.Flags().GetString("manager")
-		if mgr == "" {
+		mgrStr, _ := cmd.Flags().GetString("manager")
+		if mgrStr == "" {
 			return fmt.Errorf("--manager is required")
 		}
+		mgr := types.ManagerType(mgrStr)
 
 		version, _ := cmd.Flags().GetString("version")
-		aliasFlag, _ := cmd.Flags().GetString("alias")
+		aliasStr, _ := cmd.Flags().GetString("alias")
+		var aliasFlag types.PackageAlias
+		if aliasStr != "" {
+			aliasFlag = types.PackageAlias(aliasStr)
+		}
 		destination, _ := cmd.Flags().GetString("destination")
 		binName, _ := cmd.Flags().GetString("bin-name")
 		exclude, _ := cmd.Flags().GetString("exclude")
@@ -55,7 +61,7 @@ var addCmd = &cobra.Command{
 			return fmt.Errorf("read config: %w", err)
 		}
 
-		if target, ok := cfg.Index[pkg]; ok {
+		if target, ok := cfg.Index[types.PackageAlias(pkg)]; ok {
 			return fmt.Errorf(
 				"package name %q conflicts with existing alias %q -> %q; rename it with: i add %s --alias <new-name>",
 				pkg,
@@ -65,12 +71,12 @@ var addCmd = &cobra.Command{
 			)
 		}
 		if aliasFlag != "" {
-			if _, ok := cfg.Packages[aliasFlag]; ok {
+			if _, ok := cfg.Packages[types.PackageName(aliasFlag)]; ok {
 				return fmt.Errorf("alias name %q conflicts with existing package name", aliasFlag)
 			}
 		}
 
-		drv := manager.Lookup(mgr)
+		drv := manager.Lookup(string(mgr))
 		if drv == nil {
 			return fmt.Errorf("unknown manager %q", mgr)
 		}
@@ -101,7 +107,7 @@ var addCmd = &cobra.Command{
 
 				if installedVer, err := drv.InstalledVersion(
 					context.Background(),
-					pkg,
+					string(pkg),
 				); err == nil && installedVer != "" {
 					version = installedVer
 				}
@@ -136,7 +142,7 @@ var addCmd = &cobra.Command{
 
 		if installedVer, err := drv.InstalledVersion(
 			context.Background(),
-			pkg,
+			string(pkg),
 		); err == nil && installedVer != "" {
 			version = installedVer
 		}
@@ -151,10 +157,10 @@ var addCmd = &cobra.Command{
 		}
 		cfg.Packages[pkg] = entry
 
-		display := pkg
+		display := string(pkg)
 		if aliasFlag != "" {
 			cfg.Index[aliasFlag] = pkg
-			display = aliasFlag
+			display = string(aliasFlag)
 		}
 
 		_, err = config.Write(cfg)

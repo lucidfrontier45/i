@@ -29,7 +29,7 @@ var removeCmd = &cobra.Command{
 		}
 
 		fmt.Printf("uninstalling %s (%s@%s)...\n", full, entry.Manager, entry.Version)
-		drv := manager.Lookup(entry.Manager)
+		drv := manager.Lookup(string(entry.Manager))
 		if drv == nil {
 			return fmt.Errorf("unknown manager %q", entry.Manager)
 		}

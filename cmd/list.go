@@ -28,7 +28,7 @@ var listCmd = &cobra.Command{
 
 		byPkg := make(map[string][]string)
 		for alias, full := range cfg.Index {
-			byPkg[full] = append(byPkg[full], alias)
+			byPkg[string(full)] = append(byPkg[string(full)], string(alias))
 		}
 		for _, aliases := range byPkg {
 			sort.Strings(aliases)
@@ -42,8 +42,15 @@ var listCmd = &cobra.Command{
 			if version == "" {
 				version = "latest"
 			}
-			alias := strings.Join(byPkg[name], ", ")
-			_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", name, entry.Manager, version, alias)
+			alias := strings.Join(byPkg[string(name)], ", ")
+			_, _ = fmt.Fprintf(
+				w,
+				"%s\t%s\t%s\t%s\n",
+				string(name),
+				string(entry.Manager),
+				version,
+				alias,
+			)
 		}
 		_ = w.Flush()
 		return nil

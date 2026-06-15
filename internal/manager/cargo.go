@@ -54,31 +54,31 @@ func (c *cargoDriver) runInstall(ctx context.Context, name, version string, forc
 func (c *cargoDriver) Install(ctx context.Context, spec types.PackageSpec) error {
 	force, _ := spec.Options["force"].(bool)
 
-	if err := c.runInstall(ctx, spec.Name, spec.Version, force); err != nil {
+	if err := c.runInstall(ctx, string(spec.Name), spec.Version, force); err != nil {
 		return err
 	}
 
-	if _, err := exec.LookPath(spec.Name); err != nil {
-		return c.runInstall(ctx, spec.Name, spec.Version, true)
+	if _, err := exec.LookPath(string(spec.Name)); err != nil {
+		return c.runInstall(ctx, string(spec.Name), spec.Version, true)
 	}
 
 	return nil
 }
 
 func (c *cargoDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error {
-	if err := c.runInstall(ctx, spec.Name, "", false); err != nil {
+	if err := c.runInstall(ctx, string(spec.Name), "", false); err != nil {
 		return err
 	}
 
-	if _, err := exec.LookPath(spec.Name); err != nil {
-		return c.runInstall(ctx, spec.Name, "", true)
+	if _, err := exec.LookPath(string(spec.Name)); err != nil {
+		return c.runInstall(ctx, string(spec.Name), "", true)
 	}
 
 	return nil
 }
 
 func (c *cargoDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
-	out, err := cmdOutput(ctx, "cargo", "uninstall", spec.Name)
+	out, err := cmdOutput(ctx, "cargo", "uninstall", string(spec.Name))
 	if err != nil {
 		return fmt.Errorf("cargo uninstall: %w\n%s", err, string(out))
 	}

@@ -33,7 +33,7 @@ var upgradeCmd = &cobra.Command{
 				return fmt.Errorf("package %q not found in config", key)
 			}
 
-			drv := manager.Lookup(entry.Manager)
+			drv := manager.Lookup(string(entry.Manager))
 			if drv == nil {
 				return fmt.Errorf("unknown manager %q", entry.Manager)
 			}
@@ -53,7 +53,7 @@ var upgradeCmd = &cobra.Command{
 
 			if installedVer, err := drv.InstalledVersion(
 				context.Background(),
-				full,
+				string(full),
 			); err == nil && installedVer != "" &&
 				installedVer != entry.Version {
 				entry.Version = installedVer
@@ -69,7 +69,7 @@ var upgradeCmd = &cobra.Command{
 		hasError := false
 		needsWrite := false
 		for name, entry := range cfg.Packages {
-			drv := manager.Lookup(entry.Manager)
+			drv := manager.Lookup(string(entry.Manager))
 			if drv == nil {
 				fmt.Printf("error: unknown manager %q\n", entry.Manager)
 				hasError = true
@@ -93,7 +93,7 @@ var upgradeCmd = &cobra.Command{
 
 			if installedVer, err := drv.InstalledVersion(
 				context.Background(),
-				name,
+				string(name),
 			); err == nil && installedVer != "" &&
 				installedVer != entry.Version {
 				entry.Version = installedVer
@@ -101,7 +101,6 @@ var upgradeCmd = &cobra.Command{
 				needsWrite = true
 			}
 		}
-
 		if needsWrite {
 			if _, err := config.Write(cfg); err != nil {
 				return fmt.Errorf("write config: %w", err)

@@ -31,7 +31,7 @@ func installPkgName(name string, features []string) string {
 }
 
 func (u *uvDriver) Install(ctx context.Context, spec types.PackageSpec) error {
-	pkg := installPkgName(spec.Name, spec.Features)
+	pkg := installPkgName(string(spec.Name), spec.Features)
 	args := []string{"tool", "install"}
 	if spec.Version != "" {
 		args = append(args, pkg+"=="+spec.Version)
@@ -49,7 +49,7 @@ func (u *uvDriver) Install(ctx context.Context, spec types.PackageSpec) error {
 }
 
 func (u *uvDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error {
-	pkg := installPkgName(spec.Name, spec.Features)
+	pkg := installPkgName(string(spec.Name), spec.Features)
 	out, err := cmdOutput(ctx, "uv", "tool", "install", "--upgrade", pkg)
 	if err != nil {
 		return fmt.Errorf("uv tool upgrade: %w\n%s", err, string(out))
@@ -58,7 +58,7 @@ func (u *uvDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error {
 }
 
 func (u *uvDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
-	pkg := installPkgName(spec.Name, spec.Features)
+	pkg := installPkgName(string(spec.Name), spec.Features)
 	out, err := cmdOutput(ctx, "uv", "tool", "uninstall", pkg)
 	if err != nil {
 		return fmt.Errorf("uv tool uninstall: %w\n%s", err, string(out))

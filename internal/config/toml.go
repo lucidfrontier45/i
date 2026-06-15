@@ -4,30 +4,31 @@ import (
 	"os"
 
 	"github.com/BurntSushi/toml"
+	"github.com/lucidfrontier45/i/internal/types"
 )
 
 type PackageEntry struct {
-	Manager  string         `toml:"manager"`
-	Version  string         `toml:"version"`
-	Features []string       `toml:"features,omitempty"`
-	Options  map[string]any `toml:"options,omitempty"`
+	Manager  types.ManagerType `toml:"manager"`
+	Version  string            `toml:"version"`
+	Features []string          `toml:"features,omitempty"`
+	Options  map[string]any    `toml:"options,omitempty"`
 }
 
 // Config holds the TOML configuration mapping aliases to full package names
 // (Index) and full package names to their package entries (Packages).
 type Config struct {
-	Index    map[string]string       `toml:"index,omitempty"`
-	Packages map[string]PackageEntry `toml:"packages"`
+	Index    map[types.PackageAlias]types.PackageName `toml:"index,omitempty"`
+	Packages map[types.PackageName]PackageEntry       `toml:"packages"`
 }
 
 // ResolveName maps a user-supplied key (which may be an alias) to the full
 // package name. If key is an alias in Index, the mapped full name is returned;
 // otherwise key is treated as the full package name itself.
-func (c *Config) ResolveName(key string) string {
-	if full, ok := c.Index[key]; ok && full != "" {
+func (c *Config) ResolveName(key string) types.PackageName {
+	if full, ok := c.Index[types.PackageAlias(key)]; ok && full != "" {
 		return full
 	}
-	return key
+	return types.PackageName(key)
 }
 
 func Read() (*Config, string, error) {
@@ -37,8 +38,8 @@ func Read() (*Config, string, error) {
 	}
 
 	cfg := &Config{
-		Index:    make(map[string]string),
-		Packages: make(map[string]PackageEntry),
+		Index:    make(map[types.PackageAlias]types.PackageName),
+		Packages: make(map[types.PackageName]PackageEntry),
 	}
 
 	data, err := os.ReadFile(path)

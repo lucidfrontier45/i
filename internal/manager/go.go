@@ -30,7 +30,7 @@ func (g *goDriver) Install(ctx context.Context, spec types.PackageSpec) error {
 	if version == "" {
 		version = "latest"
 	}
-	pkg := spec.Name + "@" + version
+	pkg := string(spec.Name) + "@" + version
 	out, err := cmdOutput(ctx, "go", "install", pkg)
 	if err != nil {
 		return fmt.Errorf("go install: %w\n%s", err, string(out))
@@ -39,7 +39,7 @@ func (g *goDriver) Install(ctx context.Context, spec types.PackageSpec) error {
 }
 
 func (g *goDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error {
-	pkg := spec.Name + "@latest"
+	pkg := string(spec.Name) + "@latest"
 	out, err := cmdOutput(ctx, "go", "install", pkg)
 	if err != nil {
 		return fmt.Errorf("go upgrade: %w\n%s", err, string(out))
@@ -76,7 +76,7 @@ func binNameFromSpec(spec types.PackageSpec) string {
 	if name, ok := spec.Options["bin-name"].(string); ok && name != "" {
 		return name
 	}
-	return filepath.Base(spec.Name)
+	return filepath.Base(string(spec.Name))
 }
 
 func parseGoVersionM(output string) string {

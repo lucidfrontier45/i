@@ -24,7 +24,7 @@ func (g *grdDriver) Detect() bool {
 }
 
 func (g *grdDriver) Install(ctx context.Context, spec types.PackageSpec) error {
-	args := []string{spec.Name, "-y"}
+	args := []string{string(spec.Name), "-y"}
 	if spec.Version != "" {
 		args = append(args, "--tag", spec.Version)
 	}
@@ -42,7 +42,7 @@ func (g *grdDriver) Install(ctx context.Context, spec types.PackageSpec) error {
 func (g *grdDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error {
 	// -y is required: grd's prompt branches refuse to run when stdin
 	// is not a TTY, which is always the case under `i`.
-	args := []string{spec.Name, "-y"}
+	args := []string{string(spec.Name), "-y"}
 	g.appendCommonFlags(&args, spec.Options)
 	if force, ok := spec.Options["force"].(bool); ok && force {
 		args = append(args, "--force")
@@ -55,7 +55,7 @@ func (g *grdDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error {
 }
 
 func (g *grdDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
-	args := []string{"remove", spec.Name}
+	args := []string{"remove", string(spec.Name)}
 	if dst, ok := spec.Options["destination"].(string); ok && dst != "" {
 		args = append(args, "--destination", dst)
 	}

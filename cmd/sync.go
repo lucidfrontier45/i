@@ -32,7 +32,7 @@ var syncCmd = &cobra.Command{
 		for name, entry := range cfg.Packages {
 			fmt.Printf("syncing %s (%s@%s)...\n", name, entry.Manager, entry.Version)
 
-			drv := manager.Lookup(entry.Manager)
+			drv := manager.Lookup(string(entry.Manager))
 			if drv == nil {
 				fmt.Printf("error: unknown manager %q\n", entry.Manager)
 				hasError = true
@@ -61,7 +61,7 @@ var syncCmd = &cobra.Command{
 
 			if installedVer, err := drv.InstalledVersion(
 				context.Background(),
-				name,
+				string(name),
 			); err == nil && installedVer != "" &&
 				installedVer != entry.Version {
 				entry.Version = installedVer
