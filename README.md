@@ -7,7 +7,7 @@ Manage globally-installed CLI tools across different ecosystems from a single co
 ## Features
 
 - **Unified workflow** — add, remove, list, sync, and upgrade tools regardless of their underlying package manager
-- **Multi-manager** — supports `cargo` (via `cargo-binstall`), `uv` (Python tools), `bun` (JS/TS), `grd` (GitHub release binaries), and `go` (Go toolchain)
+- **Multi-manager** — supports `cargo` (via `cargo-binstall`), `uv` (Python tools), `bun` (JS/TS), `npm` (Node.js), `grd` (GitHub release binaries), and `go` (Go toolchain)
 - **Declarative config** — installed packages tracked in `~/.i/packages.toml`
 - **Plugin drivers** — easy to extend with new package managers
 
@@ -24,6 +24,7 @@ go install github.com/lucidfrontier45/i@latest
 | `cargo` | [`cargo-binstall`](https://github.com/cargo-bins/cargo-binstall) | ✅     | `cargo binstall`          |
 | `uv`    | [`uv`](https://docs.astral.sh/uv/)                                | ✅     | `uv tool install`         |
 | `bun`   | [`bun`](https://bun.sh)                                           | ✅     | `bun i -g`                |
+| `npm`   | [`npm`](https://docs.npmjs.com/)                                  | ✅     | `npm i -g`                |
 | `grd`   | [`grd`](https://github.com/lucidfrontier45/grd)                   | ✅     | `grd`                     |
 | `go`    | [Go toolchain](https://go.dev/dl/)                                | ✅     | `go install pkg@version`  |
 
@@ -42,6 +43,7 @@ i add starship --manager cargo
 i add ruff --manager uv --version 0.11.0
 i add lucidfrontier45/grd --manager grd
 i add golang.org/x/tools/gopls --manager go
+i add typescript --manager npm --version 5.6.3
 ```
 
 Some managers support features/extras using bracket syntax:
