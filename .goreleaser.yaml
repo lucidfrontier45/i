@@ -1,0 +1,54 @@
+version: 2
+
+project_name: i
+
+before:
+  hooks:
+    - go mod verify
+
+builds:
+  - main: .
+    binary: i
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: darwin
+        goarch: amd64
+      - goos: windows
+        goarch: arm64
+
+archives:
+  - formats: ["binary"]
+
+checksum:
+  name_template: "checksums.txt"
+
+upx:
+  - enabled: true
+    compress: best
+    lzma: true
+    goos: [linux, windows, darwin]
+    goarch: [amd64, arm64]
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
+      - "^merge:"
+
+release:
+  github:
+    owner: lucidfrontier45
+    name: i

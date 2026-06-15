@@ -50,6 +50,20 @@ Some managers support features/extras using bracket syntax:
 i add "pandas[performance,plot]" --manager uv
 ```
 
+#### grd-specific options
+
+Pass these flags to `i add` when using `--manager grd`:
+
+| Flag               | Description                                        |
+| :----------------- | :------------------------------------------------- |
+| `--destination`    | Destination directory for the binary               |
+| `--bin-name`       | Override the binary name after download            |
+| `--exclude`        | Comma-separated asset-name substrings to exclude   |
+
+```bash
+i add neovim/neovim --manager grd --destination /usr/local/bin --exclude windows
+```
+
 ### Remove a package
 
 ```bash
