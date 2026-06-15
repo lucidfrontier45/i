@@ -113,6 +113,17 @@ i upgrade       # upgrade all registered packages
 i upgrade <pkg> # upgrade a specific package
 ```
 
+### Self-upgrade
+
+```bash
+i self-upgrade
+```
+
+Download and install the latest `i` release, replacing the running binary. The
+download is verified against the published `checksums.txt`. On Windows the
+running executable is renamed out of the way first (it cannot be overwritten
+while running); the leftover is cleaned up on the next run.
+
 ### Print version
 
 ```bash
