@@ -42,6 +42,7 @@ var upgradeCmd = &cobra.Command{
 				Version:  entry.Version,
 				Manager:  entry.Manager,
 				Features: entry.Features,
+				Options:  entry.Options,
 			}
 
 			fmt.Printf("upgrading %s (%s)...\n", pkg, entry.Manager)
@@ -79,6 +80,7 @@ var upgradeCmd = &cobra.Command{
 				Version:  entry.Version,
 				Manager:  entry.Manager,
 				Features: entry.Features,
+				Options:  entry.Options,
 			}
 
 			fmt.Printf("upgrading %s (%s)...\n", name, entry.Manager)
