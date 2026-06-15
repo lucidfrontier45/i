@@ -44,7 +44,7 @@ func (c *cargoDriver) runInstall(ctx context.Context, name, version string, forc
 	if force {
 		args = append(args, "--force")
 	}
-	out, err := exec.CommandContext(ctx, "cargo", args...).CombinedOutput()
+	out, err := cmdOutput(ctx, "cargo", args...)
 	if err != nil {
 		return fmt.Errorf("cargo binstall: %w\n%s", err, string(out))
 	}
@@ -78,7 +78,7 @@ func (c *cargoDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error
 }
 
 func (c *cargoDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
-	out, err := exec.CommandContext(ctx, "cargo", "uninstall", spec.Name).CombinedOutput()
+	out, err := cmdOutput(ctx, "cargo", "uninstall", spec.Name)
 	if err != nil {
 		return fmt.Errorf("cargo uninstall: %w\n%s", err, string(out))
 	}

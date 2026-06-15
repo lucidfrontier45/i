@@ -78,6 +78,22 @@ Uninstall and deregister.
 i list
 ```
 
+### Global flags
+
+| Flag              | Description                                        |
+| :---------------- | :------------------------------------------------- |
+| `--verbose`, `-v` | Print every underlying command before it runs      |
+
+The verbose flag is available on every command:
+
+```bash
+$ i -v add starship --manager cargo
++ cargo binstall starship --no-confirm
+$ i -v sync
++ cargo binstall starship --no-confirm
++ uv tool install ruff
+```
+
 ### Sync all packages
 
 ```bash
