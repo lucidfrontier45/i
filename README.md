@@ -1,4 +1,6 @@
-# i
+<img src="logo.png" alt="logo" width="500"/>
+
+---
 
 A unified CLI interface to multiple package managers with global install features.
 
@@ -19,14 +21,14 @@ go install github.com/lucidfrontier45/i@latest
 
 ### Supported managers
 
-| Manager | Requirement                                                       | Status | Command used              |
-| :------ | :---------------------------------------------------------------- | :----- | :------------------------ |
-| `cargo` | [`cargo-binstall`](https://github.com/cargo-bins/cargo-binstall) | ✅     | `cargo binstall`          |
-| `uv`    | [`uv`](https://docs.astral.sh/uv/)                                | ✅     | `uv tool install`         |
-| `bun`   | [`bun`](https://bun.sh)                                           | ✅     | `bun i -g`                |
-| `npm`   | [`npm`](https://docs.npmjs.com/)                                  | ✅     | `npm i -g`                |
-| `grd`   | [`grd`](https://github.com/lucidfrontier45/grd)                   | ✅     | `grd`                     |
-| `go`    | [Go toolchain](https://go.dev/dl/)                                | ✅     | `go install pkg@version`  |
+| Manager | Requirement                                                      | Status | Command used             |
+| :------ | :--------------------------------------------------------------- | :----- | :----------------------- |
+| `cargo` | [`cargo-binstall`](https://github.com/cargo-bins/cargo-binstall) | ✅     | `cargo binstall`         |
+| `uv`    | [`uv`](https://docs.astral.sh/uv/)                               | ✅     | `uv tool install`        |
+| `bun`   | [`bun`](https://bun.sh)                                          | ✅     | `bun i -g`               |
+| `npm`   | [`npm`](https://docs.npmjs.com/)                                 | ✅     | `npm i -g`               |
+| `grd`   | [`grd`](https://github.com/lucidfrontier45/grd)                  | ✅     | `grd`                    |
+| `go`    | [Go toolchain](https://go.dev/dl/)                               | ✅     | `go install pkg@version` |
 
 ## Usage
 
@@ -68,11 +70,11 @@ i add "pandas[performance,plot]" --manager uv
 
 Pass these flags to `i add` when using `--manager grd`:
 
-| Flag               | Description                                        |
-| :----------------- | :------------------------------------------------- |
-| `--destination`    | Destination directory for the binary               |
-| `--bin-name`       | Override the binary name after download            |
-| `--exclude`        | Comma-separated asset-name substrings to exclude   |
+| Flag            | Description                                      |
+| :-------------- | :----------------------------------------------- |
+| `--destination` | Destination directory for the binary             |
+| `--bin-name`    | Override the binary name after download          |
+| `--exclude`     | Comma-separated asset-name substrings to exclude |
 
 ```bash
 i add neovim/neovim --manager grd --destination /usr/local/bin --exclude windows
@@ -94,9 +96,9 @@ i list
 
 ### Global flags
 
-| Flag              | Description                                        |
-| :---------------- | :------------------------------------------------- |
-| `--verbose`, `-v` | Print every underlying command before it runs      |
+| Flag              | Description                                   |
+| :---------------- | :-------------------------------------------- |
+| `--verbose`, `-v` | Print every underlying command before it runs |
 
 The verbose flag is available on every command:
 
