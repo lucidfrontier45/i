@@ -3,6 +3,8 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"sort"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/lucidfrontier45/i/internal/config"
@@ -24,15 +26,24 @@ var listCmd = &cobra.Command{
 			return nil
 		}
 
+		byPkg := make(map[string][]string)
+		for alias, full := range cfg.Index {
+			byPkg[full] = append(byPkg[full], alias)
+		}
+		for _, aliases := range byPkg {
+			sort.Strings(aliases)
+		}
+
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-		_, _ = fmt.Fprintln(w, "Package\tManager\tVersion")
-		_, _ = fmt.Fprintln(w, "-------\t-------\t-------")
+		_, _ = fmt.Fprintln(w, "Package\tManager\tVersion\tAlias")
+		_, _ = fmt.Fprintln(w, "-------\t-------\t-------\t-----")
 		for name, entry := range cfg.Packages {
 			version := entry.Version
 			if version == "" {
 				version = "latest"
 			}
-			_, _ = fmt.Fprintf(w, "%s\t%s\t%s\n", name, entry.Manager, version)
+			alias := strings.Join(byPkg[name], ", ")
+			_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", name, entry.Manager, version, alias)
 		}
 		_ = w.Flush()
 		return nil

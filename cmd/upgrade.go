@@ -26,10 +26,11 @@ var upgradeCmd = &cobra.Command{
 		}
 
 		if len(args) == 1 {
-			pkg := args[0]
-			entry, ok := cfg.Packages[pkg]
+			key := args[0]
+			full := cfg.ResolveName(key)
+			entry, ok := cfg.Packages[full]
 			if !ok {
-				return fmt.Errorf("package %q not found in config", pkg)
+				return fmt.Errorf("package %q not found in config", key)
 			}
 
 			drv := manager.Lookup(entry.Manager)
@@ -37,27 +38,26 @@ var upgradeCmd = &cobra.Command{
 				return fmt.Errorf("unknown manager %q", entry.Manager)
 			}
 
-			upstream := entry.UpstreamName(pkg)
 			spec := types.PackageSpec{
-				Name:     upstream,
+				Name:     full,
 				Version:  entry.Version,
 				Manager:  entry.Manager,
 				Features: entry.Features,
 				Options:  entry.Options,
 			}
 
-			fmt.Printf("upgrading %s (%s)...\n", pkg, entry.Manager)
+			fmt.Printf("upgrading %s (%s)...\n", full, entry.Manager)
 			if err := drv.Upgrade(context.Background(), spec); err != nil {
-				return fmt.Errorf("upgrade %s: %w", pkg, err)
+				return fmt.Errorf("upgrade %s: %w", full, err)
 			}
 
 			if installedVer, err := drv.InstalledVersion(
 				context.Background(),
-				upstream,
+				full,
 			); err == nil && installedVer != "" &&
 				installedVer != entry.Version {
 				entry.Version = installedVer
-				cfg.Packages[pkg] = entry
+				cfg.Packages[full] = entry
 				if _, err := config.Write(cfg); err != nil {
 					return fmt.Errorf("write config: %w", err)
 				}
@@ -76,9 +76,8 @@ var upgradeCmd = &cobra.Command{
 				continue
 			}
 
-			upstream := entry.UpstreamName(name)
 			spec := types.PackageSpec{
-				Name:     upstream,
+				Name:     name,
 				Version:  entry.Version,
 				Manager:  entry.Manager,
 				Features: entry.Features,
@@ -94,7 +93,7 @@ var upgradeCmd = &cobra.Command{
 
 			if installedVer, err := drv.InstalledVersion(
 				context.Background(),
-				upstream,
+				name,
 			); err == nil && installedVer != "" &&
 				installedVer != entry.Version {
 				entry.Version = installedVer

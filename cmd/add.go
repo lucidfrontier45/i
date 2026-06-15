@@ -60,12 +60,46 @@ var addCmd = &cobra.Command{
 			return fmt.Errorf("unknown manager %q", mgr)
 		}
 
-		alias := pkg
-		if aliasFlag != "" {
-			alias = aliasFlag
-		}
-		if _, exists := cfg.Packages[alias]; exists {
-			return fmt.Errorf("package alias %q already registered", alias)
+		if existing, exists := cfg.Packages[pkg]; exists {
+			if aliasFlag == "" {
+				return fmt.Errorf("package %q already registered", pkg)
+			}
+
+			cfg.Index[aliasFlag] = pkg
+
+			if version != "" && version != existing.Version {
+				spec := types.PackageSpec{
+					Name:     pkg,
+					Version:  version,
+					Manager:  mgr,
+					Features: features,
+					Options:  options,
+				}
+				if err := drv.Install(context.Background(), spec); err != nil {
+					return fmt.Errorf("install %s: %w", pkg, err)
+				}
+
+				if installedVer, err := drv.InstalledVersion(
+					context.Background(),
+					pkg,
+				); err == nil && installedVer != "" {
+					version = installedVer
+				}
+
+				existing.Version = version
+				existing.Features = features
+				if len(options) > 0 {
+					existing.Options = options
+				}
+				cfg.Packages[pkg] = existing
+			}
+
+			if _, err := config.Write(cfg); err != nil {
+				return fmt.Errorf("write config: %w", err)
+			}
+
+			fmt.Printf("added alias %s -> %s (manager: %s) to %s\n", aliasFlag, pkg, mgr, path)
+			return nil
 		}
 
 		spec := types.PackageSpec{
@@ -90,20 +124,25 @@ var addCmd = &cobra.Command{
 		entry := config.PackageEntry{
 			Manager:  mgr,
 			Version:  version,
-			Package:  pkg,
 			Features: features,
 		}
 		if len(options) > 0 {
 			entry.Options = options
 		}
-		cfg.Packages[alias] = entry
+		cfg.Packages[pkg] = entry
+
+		display := pkg
+		if aliasFlag != "" {
+			cfg.Index[aliasFlag] = pkg
+			display = aliasFlag
+		}
 
 		_, err = config.Write(cfg)
 		if err != nil {
 			return fmt.Errorf("write config: %w", err)
 		}
 
-		fmt.Printf("added %s (manager: %s, version: %s) to %s\n", alias, mgr, version, path)
+		fmt.Printf("added %s (manager: %s, version: %s) to %s\n", display, mgr, version, path)
 		return nil
 	},
 }

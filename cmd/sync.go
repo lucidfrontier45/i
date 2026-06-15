@@ -45,9 +45,8 @@ var syncCmd = &cobra.Command{
 				options["force"] = true
 			}
 
-			upstream := entry.UpstreamName(name)
 			spec := types.PackageSpec{
-				Name:     upstream,
+				Name:     name,
 				Version:  entry.Version,
 				Manager:  entry.Manager,
 				Features: entry.Features,
@@ -62,7 +61,7 @@ var syncCmd = &cobra.Command{
 
 			if installedVer, err := drv.InstalledVersion(
 				context.Background(),
-				upstream,
+				name,
 			); err == nil && installedVer != "" &&
 				installedVer != entry.Version {
 				entry.Version = installedVer

@@ -149,10 +149,20 @@ i version
 Each package manager implements the `types.Driver` interface (`internal/types/package.go`). The CLI delegates install/upgrade/remove operations to the appropriate driver. Package metadata is persisted in `~/.i/packages.toml`.
 
 ```toml
-[packages]
-starship = { manager = "cargo", version = "1.22.1", package = "starship" }
-ruff = { manager = "uv", version = "0.11.0", package = "ruff" }
-mypkg = { manager = "bun", version = "1.0.0", package = "@user/package" }
+[index]
+myalias = "@user/package"
+
+[packages."starship"]
+manager = "cargo"
+version = "1.22.1"
+
+[packages."ruff"]
+manager = "uv"
+version = "0.11.0"
+
+[packages."@user/package"]
+manager = "bun"
+version = "1.0.0"
 ```
 
 ## Extending

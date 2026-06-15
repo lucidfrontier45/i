@@ -9,23 +9,23 @@ import (
 type PackageEntry struct {
 	Manager  string         `toml:"manager"`
 	Version  string         `toml:"version"`
-	Package  string         `toml:"package"`
 	Features []string       `toml:"features,omitempty"`
 	Options  map[string]any `toml:"options,omitempty"`
 }
 
-// UpstreamName returns the upstream package name to pass to a driver.
-// Falls back to fallback when Package is empty (e.g. legacy configs written
-// before the --alias feature was added).
-func (e PackageEntry) UpstreamName(fallback string) string {
-	if e.Package != "" {
-		return e.Package
-	}
-	return fallback
+type Config struct {
+	Index    map[string]string       `toml:"index,omitempty"`
+	Packages map[string]PackageEntry `toml:"packages"`
 }
 
-type Config struct {
-	Packages map[string]PackageEntry `toml:"packages"`
+// ResolveName maps a user-supplied key (which may be an alias) to the full
+// package name. If key is an alias in Index, the mapped full name is returned;
+// otherwise key is treated as the full package name itself.
+func (c *Config) ResolveName(key string) string {
+	if full, ok := c.Index[key]; ok && full != "" {
+		return full
+	}
+	return key
 }
 
 func Read() (*Config, string, error) {
@@ -34,7 +34,10 @@ func Read() (*Config, string, error) {
 		return nil, "", err
 	}
 
-	cfg := &Config{Packages: make(map[string]PackageEntry)}
+	cfg := &Config{
+		Index:    make(map[string]string),
+		Packages: make(map[string]PackageEntry),
+	}
 
 	data, err := os.ReadFile(path)
 	if err != nil {
