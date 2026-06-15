@@ -52,7 +52,7 @@ func SelfUpdate(ctx context.Context, repo, currentVersion string) (string, error
 	}
 
 	// Best-effort cleanup of a previous run's leftover on Windows.
-	_ = os.Remove(exe + ".old")
+	_ = os.Remove(exe + ".to_remove")
 
 	rel, err := latestRelease(ctx, repo)
 	if err != nil {
@@ -267,14 +267,14 @@ func normalizeSemver(v string) string {
 
 // replaceExecutable atomically installs newFile at exePath. On Windows the
 // running executable is renamed out of the way first, since it cannot be
-// overwritten or deleted while running; the leftover ".old" file is removed on
+// overwritten or deleted while running; the leftover ".to_remove" file is removed on
 // the next invocation.
 func replaceExecutable(exePath, newFile string) error {
 	if runtime.GOOS != "windows" {
 		return os.Rename(newFile, exePath)
 	}
 
-	oldPath := exePath + ".old"
+	oldPath := exePath + ".to_remove"
 	_ = os.Remove(oldPath) // clear a stale leftover from a much older run
 
 	if err := os.Rename(exePath, oldPath); err != nil {
