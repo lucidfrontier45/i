@@ -113,6 +113,12 @@ i upgrade       # upgrade all registered packages
 i upgrade <pkg> # upgrade a specific package
 ```
 
+### Print version
+
+```bash
+i version
+```
+
 ## Supported managers
 
 | Manager | Name     | Status | Command used              |
