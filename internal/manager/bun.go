@@ -33,7 +33,7 @@ func (b *bunDriver) Install(ctx context.Context, spec types.PackageSpec) error {
 	if force, ok := spec.Options["force"].(bool); ok && force {
 		args = append(args, "--force")
 	}
-	out, err := exec.CommandContext(ctx, "bun", args...).CombinedOutput()
+	out, err := cmdOutput(ctx, "bun", args...)
 	if err != nil {
 		return fmt.Errorf("bun install: %w\n%s", err, string(out))
 	}
@@ -41,9 +41,7 @@ func (b *bunDriver) Install(ctx context.Context, spec types.PackageSpec) error {
 }
 
 func (b *bunDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error {
-	out, err := exec.CommandContext(
-		ctx, "bun", "i", "-g", spec.Name+"@latest",
-	).CombinedOutput()
+	out, err := cmdOutput(ctx, "bun", "i", "-g", spec.Name+"@latest")
 	if err != nil {
 		return fmt.Errorf("bun upgrade: %w\n%s", err, string(out))
 	}
@@ -51,9 +49,7 @@ func (b *bunDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error {
 }
 
 func (b *bunDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
-	out, err := exec.CommandContext(
-		ctx, "bun", "uninstall", "-g", spec.Name,
-	).CombinedOutput()
+	out, err := cmdOutput(ctx, "bun", "uninstall", "-g", spec.Name)
 	if err != nil {
 		return fmt.Errorf("bun uninstall: %w\n%s", err, string(out))
 	}
@@ -61,9 +57,7 @@ func (b *bunDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
 }
 
 func (b *bunDriver) InstalledVersion(ctx context.Context, pkg string) (string, error) {
-	out, err := exec.CommandContext(
-		ctx, "bun", "info", "-g", pkg, "version",
-	).CombinedOutput()
+	out, err := cmdOutput(ctx, "bun", "info", "-g", pkg, "version")
 	if err != nil {
 		return "", nil
 	}

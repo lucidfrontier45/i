@@ -41,7 +41,7 @@ func (u *uvDriver) Install(ctx context.Context, spec types.PackageSpec) error {
 	if force, ok := spec.Options["force"].(bool); ok && force {
 		args = append(args, "--reinstall")
 	}
-	out, err := exec.CommandContext(ctx, "uv", args...).CombinedOutput()
+	out, err := cmdOutput(ctx, "uv", args...)
 	if err != nil {
 		return fmt.Errorf("uv tool install: %w\n%s", err, string(out))
 	}
@@ -50,8 +50,7 @@ func (u *uvDriver) Install(ctx context.Context, spec types.PackageSpec) error {
 
 func (u *uvDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error {
 	pkg := installPkgName(spec.Name, spec.Features)
-	out, err := exec.CommandContext(ctx, "uv", "tool", "install", "--upgrade", pkg).
-		CombinedOutput()
+	out, err := cmdOutput(ctx, "uv", "tool", "install", "--upgrade", pkg)
 	if err != nil {
 		return fmt.Errorf("uv tool upgrade: %w\n%s", err, string(out))
 	}
@@ -60,7 +59,7 @@ func (u *uvDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error {
 
 func (u *uvDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
 	pkg := installPkgName(spec.Name, spec.Features)
-	out, err := exec.CommandContext(ctx, "uv", "tool", "uninstall", pkg).CombinedOutput()
+	out, err := cmdOutput(ctx, "uv", "tool", "uninstall", pkg)
 	if err != nil {
 		return fmt.Errorf("uv tool uninstall: %w\n%s", err, string(out))
 	}
@@ -68,7 +67,7 @@ func (u *uvDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
 }
 
 func (u *uvDriver) InstalledVersion(ctx context.Context, pkg string) (string, error) {
-	out, err := exec.CommandContext(ctx, "uv", "tool", "list").CombinedOutput()
+	out, err := cmdOutput(ctx, "uv", "tool", "list")
 	if err != nil {
 		return "", fmt.Errorf("uv tool list: %w", err)
 	}

@@ -31,7 +31,7 @@ func (g *goDriver) Install(ctx context.Context, spec types.PackageSpec) error {
 		version = "latest"
 	}
 	pkg := spec.Name + "@" + version
-	out, err := exec.CommandContext(ctx, "go", "install", pkg).CombinedOutput()
+	out, err := cmdOutput(ctx, "go", "install", pkg)
 	if err != nil {
 		return fmt.Errorf("go install: %w\n%s", err, string(out))
 	}
@@ -40,7 +40,7 @@ func (g *goDriver) Install(ctx context.Context, spec types.PackageSpec) error {
 
 func (g *goDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error {
 	pkg := spec.Name + "@latest"
-	out, err := exec.CommandContext(ctx, "go", "install", pkg).CombinedOutput()
+	out, err := cmdOutput(ctx, "go", "install", pkg)
 	if err != nil {
 		return fmt.Errorf("go upgrade: %w\n%s", err, string(out))
 	}
@@ -65,7 +65,7 @@ func (g *goDriver) InstalledVersion(ctx context.Context, pkg string) (string, er
 	if err != nil {
 		return "", nil
 	}
-	out, err := exec.CommandContext(ctx, "go", "version", "-m", path).CombinedOutput()
+	out, err := cmdOutput(ctx, "go", "version", "-m", path)
 	if err != nil {
 		return "", nil
 	}

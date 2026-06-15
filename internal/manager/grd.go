@@ -32,7 +32,7 @@ func (g *grdDriver) Install(ctx context.Context, spec types.PackageSpec) error {
 	if force, ok := spec.Options["force"].(bool); ok && force {
 		args = append(args, "--force")
 	}
-	out, err := exec.CommandContext(ctx, "grd", args...).CombinedOutput()
+	out, err := cmdOutput(ctx, "grd", args...)
 	if err != nil {
 		return fmt.Errorf("grd install: %w\n%s", err, strings.TrimSpace(string(out)))
 	}
@@ -47,7 +47,7 @@ func (g *grdDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error {
 	if force, ok := spec.Options["force"].(bool); ok && force {
 		args = append(args, "--force")
 	}
-	out, err := exec.CommandContext(ctx, "grd", args...).CombinedOutput()
+	out, err := cmdOutput(ctx, "grd", args...)
 	if err != nil {
 		return fmt.Errorf("grd upgrade: %w\n%s", err, strings.TrimSpace(string(out)))
 	}
@@ -62,7 +62,7 @@ func (g *grdDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
 	if name, ok := spec.Options["bin-name"].(string); ok && name != "" {
 		args = append(args, "--bin-name", name)
 	}
-	out, err := exec.CommandContext(ctx, "grd", args...).CombinedOutput()
+	out, err := cmdOutput(ctx, "grd", args...)
 	if err != nil {
 		return fmt.Errorf("grd remove: %w\n%s", err, strings.TrimSpace(string(out)))
 	}
@@ -70,7 +70,7 @@ func (g *grdDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
 }
 
 func (g *grdDriver) InstalledVersion(ctx context.Context, pkg string) (string, error) {
-	out, err := exec.CommandContext(ctx, "grd", "info", pkg).CombinedOutput()
+	out, err := cmdOutput(ctx, "grd", "info", pkg)
 	if err != nil {
 		return "", fmt.Errorf("grd info %s: %w", pkg, err)
 	}
