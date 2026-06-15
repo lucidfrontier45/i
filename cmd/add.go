@@ -55,6 +55,21 @@ var addCmd = &cobra.Command{
 			return fmt.Errorf("read config: %w", err)
 		}
 
+		if target, ok := cfg.Index[pkg]; ok {
+			return fmt.Errorf(
+				"package name %q conflicts with existing alias %q -> %q; rename it with: i add %s --alias <new-name>",
+				pkg,
+				pkg,
+				target,
+				target,
+			)
+		}
+		if aliasFlag != "" {
+			if _, ok := cfg.Packages[aliasFlag]; ok {
+				return fmt.Errorf("alias name %q conflicts with existing package name", aliasFlag)
+			}
+		}
+
 		drv := manager.Lookup(mgr)
 		if drv == nil {
 			return fmt.Errorf("unknown manager %q", mgr)
@@ -65,6 +80,11 @@ var addCmd = &cobra.Command{
 				return fmt.Errorf("package %q already registered", pkg)
 			}
 
+			for key, val := range cfg.Index {
+				if val == pkg {
+					delete(cfg.Index, key)
+				}
+			}
 			cfg.Index[aliasFlag] = pkg
 
 			if version != "" && version != existing.Version {
