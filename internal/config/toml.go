@@ -13,6 +13,8 @@ type PackageEntry struct {
 	Options  map[string]any `toml:"options,omitempty"`
 }
 
+// Config holds the TOML configuration mapping aliases to full package names
+// (Index) and full package names to their package entries (Packages).
 type Config struct {
 	Index    map[string]string       `toml:"index,omitempty"`
 	Packages map[string]PackageEntry `toml:"packages"`
