@@ -44,6 +44,7 @@ func runSync(force bool) error {
 			Version:  entry.Version,
 			Manager:  entry.Manager,
 			Features: entry.Features,
+			With:     entry.With,
 			Options:  options,
 		}
 

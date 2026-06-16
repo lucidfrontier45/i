@@ -38,6 +38,9 @@ func (u *uvDriver) Install(ctx context.Context, spec types.PackageSpec) error {
 	} else {
 		args = append(args, pkg)
 	}
+	for _, w := range spec.With {
+		args = append(args, "--with", w)
+	}
 	if force, ok := spec.Options["force"].(bool); ok && force {
 		args = append(args, "--reinstall")
 	}
@@ -50,7 +53,11 @@ func (u *uvDriver) Install(ctx context.Context, spec types.PackageSpec) error {
 
 func (u *uvDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error {
 	pkg := installPkgName(string(spec.Name), spec.Features)
-	out, err := cmdOutput(ctx, "uv", "tool", "install", "--upgrade", pkg)
+	args := []string{"tool", "install", "--upgrade", pkg}
+	for _, w := range spec.With {
+		args = append(args, "--with", w)
+	}
+	out, err := cmdOutput(ctx, "uv", args...)
 	if err != nil {
 		return fmt.Errorf("uv tool upgrade: %w\n%s", err, string(out))
 	}

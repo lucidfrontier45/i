@@ -23,6 +23,7 @@ type PackageSpec struct {
 	Manager  ManagerType
 	Version  string
 	Features []string
+	With     []string
 	Options  map[string]any
 }
 

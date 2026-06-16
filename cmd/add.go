@@ -19,6 +19,7 @@ type AddOptions struct {
 	Destination string
 	BinName     string
 	Exclude     string
+	With        []string
 }
 
 func runAdd(opts AddOptions) error {
@@ -35,6 +36,11 @@ func runAdd(opts AddOptions) error {
 		return fmt.Errorf("--manager is required")
 	}
 	mgr := types.ManagerType(mgrStr)
+
+	with := filterEmpty(opts.With)
+	if len(with) > 0 && mgr != types.ManagerUv {
+		return fmt.Errorf("--with is only valid with --manager uv")
+	}
 
 	version := opts.Version
 	var aliasFlag types.PackageAlias
@@ -101,6 +107,7 @@ func runAdd(opts AddOptions) error {
 				Version:  version,
 				Manager:  mgr,
 				Features: features,
+				With:     with,
 				Options:  options,
 			}
 			if err := drv.Install(context.Background(), spec); err != nil {
@@ -116,6 +123,7 @@ func runAdd(opts AddOptions) error {
 
 			existing.Version = version
 			existing.Features = features
+			existing.With = with
 			if len(options) > 0 {
 				existing.Options = options
 			}
@@ -135,6 +143,7 @@ func runAdd(opts AddOptions) error {
 		Version:  version,
 		Manager:  mgr,
 		Features: features,
+		With:     with,
 		Options:  options,
 	}
 
@@ -153,6 +162,7 @@ func runAdd(opts AddOptions) error {
 		Manager:  mgr,
 		Version:  version,
 		Features: features,
+		With:     with,
 	}
 	if len(options) > 0 {
 		entry.Options = options
@@ -185,10 +195,12 @@ var addCmd = &cobra.Command{
 		dest, _ := cmd.Flags().GetString("destination")
 		binName, _ := cmd.Flags().GetString("bin-name")
 		exclude, _ := cmd.Flags().GetString("exclude")
+		with, _ := cmd.Flags().GetStringSlice("with")
 		return runAdd(AddOptions{
 			Raw: args[0], Manager: mgr, Version: version,
 			Alias: alias, Destination: dest,
 			BinName: binName, Exclude: exclude,
+			With: with,
 		})
 	},
 }
@@ -203,6 +215,8 @@ func init() {
 	addCmd.Flags().String("destination", "", "Destination directory (grd)")
 	addCmd.Flags().String("bin-name", "", "Override binary name (grd)")
 	addCmd.Flags().String("exclude", "", "Comma-separated asset-name substrings to exclude (grd)")
+	addCmd.Flags().
+		StringSlice("with", nil, "Extra package(s) to include (uv only); repeatable or comma-separated, accepts name or name==version")
 }
 
 func parseBracket(raw string) (name string, features []string) {
@@ -222,4 +236,15 @@ func parseBracket(raw string) (name string, features []string) {
 		}
 	}
 	return name, features
+}
+
+// filterEmpty drops blank entries from a slice and returns a fresh slice.
+func filterEmpty(in []string) []string {
+	out := make([]string, 0, len(in))
+	for _, s := range in {
+		if s != "" {
+			out = append(out, s)
+		}
+	}
+	return out
 }
