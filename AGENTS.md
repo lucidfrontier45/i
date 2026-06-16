@@ -23,8 +23,6 @@ Detect the existing layout or request guidance for new projects:
 1. **Existing Projects:** Detect if the project uses a **Flat Layout** (logic in root) or **Standard Layout** (using `internal/`, `pkg/`, and `cmd/`). Follow the established pattern strictly.
 2. **New Projects:** **Do not assume a structure.** Ask the user: "Would you prefer a Flat Layout or a Standard Go Project Layout (`internal/pkg/cmd`)?" before creating directories.
 
-Refere `docs/architecture.md` for detail when needed.
-
 ## Build & Test
 
 - **Build:** `go build ./...`
@@ -43,3 +41,6 @@ Refere `docs/architecture.md` for detail when needed.
 
 - Ensure `go mod tidy` and `golangci-lint fmt` have been run.
 - Summarize the changes made and list any new dependencies added so the human can review before committing.
+
+
+@docs/architecture.md
