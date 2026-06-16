@@ -12,14 +12,16 @@ import (
 )
 
 type AddOptions struct {
-	Raw         string
-	Manager     string
-	Version     string
-	Alias       string
-	Destination string
-	BinName     string
-	Exclude     string
-	With        []string
+	Raw             string
+	Manager         string
+	Version         string
+	Alias           string
+	Destination     string
+	BinName         string
+	Exclude         string
+	With            []string
+	WithChanged     bool
+	FeaturesChanged bool
 }
 
 func runAdd(opts AddOptions) error {
@@ -70,13 +72,8 @@ func runAdd(opts AddOptions) error {
 	}
 
 	if target, ok := cfg.Index[types.PackageAlias(pkg)]; ok {
-		return fmt.Errorf(
-			"package name %q conflicts with existing alias %q -> %q; rename it with: i add %s --alias <new-name>",
-			pkg,
-			pkg,
-			target,
-			target,
-		)
+		fmt.Printf("alias %s -> %s already registered to %s\n", pkg, target, path)
+		return nil
 	}
 	if aliasFlag != "" {
 		if _, ok := cfg.Packages[types.PackageName(aliasFlag)]; ok {
@@ -90,25 +87,49 @@ func runAdd(opts AddOptions) error {
 	}
 
 	if existing, exists := cfg.Packages[pkg]; exists {
-		if aliasFlag == "" {
-			return fmt.Errorf("package %q already registered", pkg)
+		hasUpdate := aliasFlag != "" ||
+			(version != "" && version != existing.Version) ||
+			opts.FeaturesChanged || opts.WithChanged || len(options) > 0
+		if !hasUpdate {
+			fmt.Printf("package %s already registered to %s\n", pkg, path)
+			return nil
 		}
-
-		for key, val := range cfg.Index {
-			if val == pkg {
-				delete(cfg.Index, key)
+		if aliasFlag != "" {
+			for key, val := range cfg.Index {
+				if val == pkg {
+					delete(cfg.Index, key)
+				}
 			}
+			cfg.Index[aliasFlag] = pkg
 		}
-		cfg.Index[aliasFlag] = pkg
 
+		merged := existing
+		changed := false
 		if version != "" && version != existing.Version {
+			merged.Version = version
+			changed = true
+		}
+		if opts.FeaturesChanged {
+			merged.Features = features
+			changed = true
+		}
+		if opts.WithChanged {
+			merged.With = with
+			changed = true
+		}
+		if len(options) > 0 {
+			merged.Options = options
+			changed = true
+		}
+
+		if changed {
 			spec := types.PackageSpec{
 				Name:     pkg,
-				Version:  version,
+				Version:  merged.Version,
 				Manager:  mgr,
-				Features: features,
-				With:     with,
-				Options:  options,
+				Features: merged.Features,
+				With:     merged.With,
+				Options:  merged.Options,
 			}
 			if err := drv.Install(context.Background(), spec); err != nil {
 				return fmt.Errorf("install %s: %w", pkg, err)
@@ -118,23 +139,20 @@ func runAdd(opts AddOptions) error {
 				context.Background(),
 				string(pkg),
 			); err == nil && installedVer != "" {
-				version = installedVer
+				merged.Version = installedVer
 			}
-
-			existing.Version = version
-			existing.Features = features
-			existing.With = with
-			if len(options) > 0 {
-				existing.Options = options
-			}
-			cfg.Packages[pkg] = existing
+			cfg.Packages[pkg] = merged
 		}
 
 		if _, err := config.Write(cfg); err != nil {
 			return fmt.Errorf("write config: %w", err)
 		}
 
-		fmt.Printf("added alias %s -> %s (manager: %s) to %s\n", aliasFlag, pkg, mgr, path)
+		if aliasFlag != "" {
+			fmt.Printf("updated alias %s -> %s (manager: %s) to %s\n", aliasFlag, pkg, mgr, path)
+		} else {
+			fmt.Printf("updated %s (manager: %s) to %s\n", pkg, mgr, path)
+		}
 		return nil
 	}
 
@@ -187,7 +205,6 @@ func runAdd(opts AddOptions) error {
 var addCmd = &cobra.Command{
 	Use:   "add <package>",
 	Short: "Register a package to manage",
-	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		mgr, _ := cmd.Flags().GetString("manager")
 		version, _ := cmd.Flags().GetString("version")
@@ -196,11 +213,13 @@ var addCmd = &cobra.Command{
 		binName, _ := cmd.Flags().GetString("bin-name")
 		exclude, _ := cmd.Flags().GetString("exclude")
 		with, _ := cmd.Flags().GetStringSlice("with")
+		withChanged := cmd.Flags().Changed("with")
 		return runAdd(AddOptions{
 			Raw: args[0], Manager: mgr, Version: version,
 			Alias: alias, Destination: dest,
 			BinName: binName, Exclude: exclude,
-			With: with,
+			With: with, WithChanged: withChanged,
+			FeaturesChanged: strings.Contains(args[0], "["),
 		})
 	},
 }
