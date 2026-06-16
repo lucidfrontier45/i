@@ -38,7 +38,6 @@ func runUpgrade(key string) error {
 			Version:  entry.Version,
 			Manager:  entry.Manager,
 			Features: entry.Features,
-			With:     entry.With,
 			Options:  entry.Options,
 		}
 
@@ -77,7 +76,6 @@ func runUpgrade(key string) error {
 			Version:  entry.Version,
 			Manager:  entry.Manager,
 			Features: entry.Features,
-			With:     entry.With,
 			Options:  entry.Options,
 		}
 

@@ -11,7 +11,6 @@ type PackageEntry struct {
 	Manager  types.ManagerType `toml:"manager"`
 	Version  string            `toml:"version"`
 	Features []string          `toml:"features,omitempty"`
-	With     []string          `toml:"with,omitempty"`
 	Options  map[string]any    `toml:"options,omitempty"`
 }
 

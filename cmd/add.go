@@ -19,12 +19,10 @@ type AddOptions struct {
 	Destination     string
 	BinName         string
 	Exclude         string
-	With            []string
-	WithChanged     bool
 	FeaturesChanged bool
 }
 
-func runAdd(opts AddOptions) error {
+func runAdd(opts AddOptions, with []string, withChanged bool) error {
 	raw := opts.Raw
 
 	pkgStr, features := parseBracket(raw)
@@ -39,7 +37,7 @@ func runAdd(opts AddOptions) error {
 	}
 	mgr := types.ManagerType(mgrStr)
 
-	with := filterEmpty(opts.With)
+	with = filterEmpty(with)
 	if len(with) > 0 && mgr != types.ManagerUv {
 		return fmt.Errorf("--with is only valid with --manager uv")
 	}
@@ -59,6 +57,9 @@ func runAdd(opts AddOptions) error {
 	}
 	if opts.Exclude != "" {
 		options["exclude"] = opts.Exclude
+	}
+	if len(with) > 0 {
+		options["with"] = with
 	}
 
 	_, err := config.EnsureDir()
@@ -89,7 +90,7 @@ func runAdd(opts AddOptions) error {
 	if existing, exists := cfg.Packages[pkg]; exists {
 		hasUpdate := aliasFlag != "" ||
 			(version != "" && version != existing.Version) ||
-			opts.FeaturesChanged || opts.WithChanged || len(options) > 0
+			opts.FeaturesChanged || withChanged || len(options) > 0
 		if !hasUpdate {
 			fmt.Printf("package %s already registered to %s\n", pkg, path)
 			return nil
@@ -113,10 +114,6 @@ func runAdd(opts AddOptions) error {
 			merged.Features = features
 			changed = true
 		}
-		if opts.WithChanged {
-			merged.With = with
-			changed = true
-		}
 		if len(options) > 0 {
 			merged.Options = options
 			changed = true
@@ -128,7 +125,6 @@ func runAdd(opts AddOptions) error {
 				Version:  merged.Version,
 				Manager:  mgr,
 				Features: merged.Features,
-				With:     merged.With,
 				Options:  merged.Options,
 			}
 			if err := drv.Install(context.Background(), spec); err != nil {
@@ -161,7 +157,6 @@ func runAdd(opts AddOptions) error {
 		Version:  version,
 		Manager:  mgr,
 		Features: features,
-		With:     with,
 		Options:  options,
 	}
 
@@ -180,7 +175,6 @@ func runAdd(opts AddOptions) error {
 		Manager:  mgr,
 		Version:  version,
 		Features: features,
-		With:     with,
 	}
 	if len(options) > 0 {
 		entry.Options = options
@@ -218,9 +212,8 @@ var addCmd = &cobra.Command{
 			Raw: args[0], Manager: mgr, Version: version,
 			Alias: alias, Destination: dest,
 			BinName: binName, Exclude: exclude,
-			With: with, WithChanged: withChanged,
 			FeaturesChanged: strings.Contains(args[0], "["),
-		})
+		}, with, withChanged)
 	},
 }
 
