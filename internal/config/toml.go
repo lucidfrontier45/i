@@ -70,7 +70,9 @@ func Write(cfg *Config) (string, error) {
 	}
 	defer func() { _ = f.Close() }()
 
-	err = toml.NewEncoder(f).Encode(cfg)
+	enc := toml.NewEncoder(f)
+	enc.Indent = ""
+	err = enc.Encode(cfg)
 	if err != nil {
 		return "", err
 	}
