@@ -66,6 +66,26 @@ Some managers support features/extras using bracket syntax:
 i add "pandas[performance,plot]" --manager uv
 ```
 
+#### uv-specific options
+
+Pass these flags to `i add` when using `--manager uv`:
+
+| Flag      | Description                                                 |
+| :-------- | :---------------------------------------------------------- |
+| `--with`  | Extra package(s) to include; repeatable or comma-separated  |
+
+```bash
+# Both forms are equivalent:
+i add pytest --manager uv --with httpx,mypy
+i add pytest --manager uv --with httpx --with mypy
+
+# With version constraints:
+i add pytest --manager uv --with httpx==0.28.0 --with mypy==1.15.0
+```
+
+The `--with` flag accepts `name` or `name==version`, is repeatable, and also
+accepts comma-separated values in a single flag. It maps to `uv tool install --with <pkg>`.
+
 #### grd-specific options
 
 Pass these flags to `i add` when using `--manager grd`:
