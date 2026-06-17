@@ -27,14 +27,14 @@ var ErrUpToDate = errors.New("already up to date")
 
 const githubAPI = "https://api.github.com/repos/"
 
-type asset struct {
+type Asset struct {
 	Name               string `json:"name"`
 	BrowserDownloadURL string `json:"browser_download_url"`
 }
 
-type release struct {
+type Release struct {
 	TagName string  `json:"tag_name"`
-	Assets  []asset `json:"assets"`
+	Assets  []Asset `json:"assets"`
 }
 
 // SelfUpdate downloads the latest release of repo (an "owner/name" GitHub
@@ -68,7 +68,7 @@ func SelfUpdate(ctx context.Context, repo, currentVersion string) (string, error
 	}
 
 	name := assetName(latestVersion)
-	downloadURL, ok := findAsset(rel.Assets, name)
+	downloadURL, ok := FindAsset(rel.Assets, name)
 	if !ok {
 		return "", fmt.Errorf(
 			"no prebuilt binary for %s/%s (wanted asset %q)",
@@ -79,7 +79,7 @@ func SelfUpdate(ctx context.Context, repo, currentVersion string) (string, error
 	}
 
 	fmt.Printf("downloading %s...\n", downloadURL)
-	data, err := download(ctx, downloadURL)
+	data, err := DownloadURL(ctx, downloadURL)
 	if err != nil {
 		return "", fmt.Errorf("download %s: %w", name, err)
 	}
@@ -117,7 +117,7 @@ func SelfUpdate(ctx context.Context, repo, currentVersion string) (string, error
 }
 
 // latestRelease returns the latest non-prerelease of repo from the GitHub API.
-func latestRelease(ctx context.Context, repo string) (*release, error) {
+func latestRelease(ctx context.Context, repo string) (*Release, error) {
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodGet,
@@ -143,7 +143,41 @@ func latestRelease(ctx context.Context, repo string) (*release, error) {
 		)
 	}
 
-	var rel release
+	var rel Release
+	if err := json.NewDecoder(resp.Body).Decode(&rel); err != nil {
+		return nil, err
+	}
+	return &rel, nil
+}
+
+// ReleaseByTag returns the release with the given tag from the GitHub API.
+func ReleaseByTag(ctx context.Context, repo, tag string) (*Release, error) {
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodGet,
+		githubAPI+repo+"/releases/tags/"+tag,
+		nil,
+	)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/vnd.github+json")
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf(
+			"github api returned %s",
+			resp.Status,
+		)
+	}
+
+	var rel Release
 	if err := json.NewDecoder(resp.Body).Decode(&rel); err != nil {
 		return nil, err
 	}
@@ -160,8 +194,8 @@ func assetName(version string) string {
 	return name
 }
 
-// findAsset returns the download URL of the asset whose name matches, if any.
-func findAsset(assets []asset, name string) (string, bool) {
+// FindAsset returns the download URL of the asset whose name matches, if any.
+func FindAsset(assets []Asset, name string) (string, bool) {
 	for i := range assets {
 		if assets[i].Name == name {
 			return assets[i].BrowserDownloadURL, true
@@ -170,8 +204,8 @@ func findAsset(assets []asset, name string) (string, bool) {
 	return "", false
 }
 
-// download fetches the full body of url.
-func download(ctx context.Context, url string) ([]byte, error) {
+// DownloadURL fetches the full body of url.
+func DownloadURL(ctx context.Context, url string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
@@ -208,7 +242,7 @@ func verifyChecksum(
 		repo,
 		tag,
 	)
-	body, err := download(ctx, url)
+	body, err := DownloadURL(ctx, url)
 	if err != nil {
 		return fmt.Errorf("fetch checksums.txt: %w", err)
 	}
