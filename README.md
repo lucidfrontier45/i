@@ -149,6 +149,22 @@ i upgrade       # upgrade all registered packages
 i upgrade <pkg> # upgrade a specific package
 ```
 
+### Get grd
+
+```bash
+i get-grd [--version <version>]
+```
+
+Download or upgrade `grd` itself from GitHub releases. If `grd` is not already on
+PATH, it is installed next to the `i` binary. If it is already installed and the
+current version is older than the requested one, it is upgraded in place. The
+default version is `0.9.1`.
+
+```bash
+i get-grd                  # install/upgrade to 0.9.1
+i get-grd --version 0.9.0  # install/upgrade to a specific version
+```
+
 ### Self-upgrade
 
 ```bash
