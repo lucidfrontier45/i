@@ -66,15 +66,7 @@ func (c *cargoDriver) Install(ctx context.Context, spec types.PackageSpec) error
 }
 
 func (c *cargoDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error {
-	if err := c.runInstall(ctx, string(spec.Name), "", false); err != nil {
-		return err
-	}
-
-	if _, err := exec.LookPath(string(spec.Name)); err != nil {
-		return c.runInstall(ctx, string(spec.Name), "", true)
-	}
-
-	return nil
+	return c.runInstall(ctx, string(spec.Name), "", false)
 }
 
 func (c *cargoDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
