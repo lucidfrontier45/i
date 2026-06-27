@@ -2,9 +2,9 @@ package manager
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os/exec"
-	"strings"
 
 	"github.com/lucidfrontier45/i/internal/types"
 )
@@ -57,25 +57,24 @@ func (n *npmDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
 }
 
 func (n *npmDriver) InstalledVersion(ctx context.Context, pkg string) (string, error) {
-	out, err := cmdOutput(ctx, "npm", "ls", "-g", pkg, "version")
+	out, err := cmdOutput(ctx, "npm", "ls", "-g", pkg, "--json", "--depth=0")
 	if err != nil {
-		return "", nil
+		return "", fmt.Errorf("npm ls %s: %w", pkg, err)
 	}
-	return parseNpmLsVersion(string(out), pkg), nil
+	return parseNpmLsJSON(string(out), pkg), nil
 }
 
-func parseNpmLsVersion(output, pkg string) string {
-	prefix := pkg + "@"
-	for _, line := range strings.Split(output, "\n") {
-		line = strings.TrimSpace(line)
-		if !strings.HasPrefix(line, prefix) {
-			continue
-		}
-		rest := strings.TrimPrefix(line, prefix)
-		if idx := strings.IndexAny(rest, " "); idx >= 0 {
-			rest = rest[:idx]
-		}
-		return rest
+func parseNpmLsJSON(output, pkg string) string {
+	var doc struct {
+		Dependencies map[string]struct {
+			Version string `json:"version"`
+		} `json:"dependencies"`
+	}
+	if err := json.Unmarshal([]byte(output), &doc); err != nil {
+		return ""
+	}
+	if d, ok := doc.Dependencies[pkg]; ok {
+		return d.Version
 	}
 	return ""
 }

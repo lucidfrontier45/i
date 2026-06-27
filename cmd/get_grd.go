@@ -109,13 +109,9 @@ func downloadGrd(ctx context.Context, dest, version string) error {
 }
 
 func getGrdVersion() (string, error) {
-	out, err := exec.Command("grd", "--version").Output()
+	out, err := exec.Command("grd", "--version").CombinedOutput()
 	if err != nil {
-		combined, cerr := exec.Command("grd", "--version").CombinedOutput()
-		if cerr != nil {
-			return "", fmt.Errorf("grd --version failed: %w", cerr)
-		}
-		out = combined
+		return "", fmt.Errorf("grd --version failed: %w\n%s", err, out)
 	}
 	s := strings.TrimSpace(string(out))
 	parts := strings.Fields(s)

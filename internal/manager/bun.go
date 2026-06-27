@@ -57,9 +57,19 @@ func (b *bunDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
 }
 
 func (b *bunDriver) InstalledVersion(ctx context.Context, pkg string) (string, error) {
-	out, err := cmdOutput(ctx, "bun", "info", "-g", pkg, "version")
+	out, err := cmdOutput(ctx, "bun", "pm", "ls", "-g")
 	if err != nil {
-		return "", nil
+		return "", fmt.Errorf("bun pm ls: %w", err)
 	}
-	return strings.TrimSpace(string(out)), nil
+	prefix := pkg + "@"
+	for _, line := range strings.Split(string(out), "\n") {
+		line = strings.TrimSpace(line)
+		line = strings.TrimPrefix(line, "├── ")
+		line = strings.TrimPrefix(line, "└── ")
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, prefix) {
+			return strings.TrimPrefix(line, prefix), nil
+		}
+	}
+	return "", nil
 }

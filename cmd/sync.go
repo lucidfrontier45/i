@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/lucidfrontier45/i/internal/config"
 	"github.com/lucidfrontier45/i/internal/manager"
@@ -23,7 +24,14 @@ func runSync(force bool) error {
 
 	hasError := false
 	needsWrite := false
-	for name, entry := range cfg.Packages {
+	names := make([]string, 0, len(cfg.Packages))
+	for n := range cfg.Packages {
+		names = append(names, string(n))
+	}
+	sort.Strings(names)
+	for _, n := range names {
+		name := types.PackageName(n)
+		entry := cfg.Packages[name]
 		fmt.Printf("syncing %s (%s@%s)...\n", name, entry.Manager, entry.Version)
 
 		drv := manager.Lookup(string(entry.Manager))

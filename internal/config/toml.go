@@ -1,7 +1,9 @@
 package config
 
 import (
+	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/BurntSushi/toml"
 	"github.com/lucidfrontier45/i/internal/types"
@@ -63,19 +65,39 @@ func Write(cfg *Config) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return "", fmt.Errorf("create config dir: %w", err)
+	}
 
-	f, err := os.Create(path)
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".packages.toml-*")
 	if err != nil {
 		return "", err
 	}
-	defer func() { _ = f.Close() }()
+	tmpPath := tmp.Name()
 
-	enc := toml.NewEncoder(f)
+	enc := toml.NewEncoder(tmp)
 	enc.Indent = ""
-	err = enc.Encode(cfg)
-	if err != nil {
+	if err := enc.Encode(cfg); err != nil {
+		_ = tmp.Close()
+		_ = os.Remove(tmpPath)
 		return "", err
 	}
-
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		_ = os.Remove(tmpPath)
+		return "", err
+	}
+	if err := tmp.Close(); err != nil {
+		_ = os.Remove(tmpPath)
+		return "", err
+	}
+	if err := os.Chmod(tmpPath, 0o644); err != nil {
+		_ = os.Remove(tmpPath)
+		return "", err
+	}
+	if err := os.Rename(tmpPath, path); err != nil {
+		_ = os.Remove(tmpPath)
+		return "", err
+	}
 	return path, nil
 }

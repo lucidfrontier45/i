@@ -72,13 +72,12 @@ func runAdd(opts AddOptions, with []string, withChanged bool) error {
 		return fmt.Errorf("read config: %w", err)
 	}
 
-	if target, ok := cfg.Index[types.PackageAlias(pkg)]; ok {
-		fmt.Printf("alias %s -> %s already registered to %s\n", pkg, target, path)
-		return nil
-	}
 	if aliasFlag != "" {
 		if _, ok := cfg.Packages[types.PackageName(aliasFlag)]; ok {
-			return fmt.Errorf("alias name %q conflicts with existing package name", aliasFlag)
+			return fmt.Errorf("alias %q conflicts with an existing package name", aliasFlag)
+		}
+		if existing, ok := cfg.Index[aliasFlag]; ok && existing != pkg {
+			return fmt.Errorf("alias %q already maps to %q", aliasFlag, existing)
 		}
 	}
 
@@ -199,6 +198,7 @@ func runAdd(opts AddOptions, with []string, withChanged bool) error {
 var addCmd = &cobra.Command{
 	Use:   "add <package>",
 	Short: "Register a package to manage",
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		mgr, _ := cmd.Flags().GetString("manager")
 		version, _ := cmd.Flags().GetString("version")

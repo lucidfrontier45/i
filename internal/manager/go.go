@@ -63,11 +63,11 @@ func (g *goDriver) InstalledVersion(ctx context.Context, pkg string) (string, er
 	binName := filepath.Base(pkg)
 	path, err := exec.LookPath(binName)
 	if err != nil {
-		return "", nil
+		return "", fmt.Errorf("go binary %q not found on PATH: %w", binName, err)
 	}
 	out, err := cmdOutput(ctx, "go", "version", "-m", path)
 	if err != nil {
-		return "", nil
+		return "", fmt.Errorf("go version -m %s: %w", path, err)
 	}
 	return parseGoVersionM(string(out)), nil
 }

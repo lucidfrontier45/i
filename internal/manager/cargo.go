@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/lucidfrontier45/i/internal/types"
@@ -28,10 +29,18 @@ func (c *cargoDriver) Detect() bool {
 }
 
 func cargoHome() string {
-	if home, ok := os.LookupEnv("CARGO_HOME"); ok {
+	if home, ok := os.LookupEnv("CARGO_HOME"); ok && home != "" {
 		return home
 	}
-	return filepath.Join(os.Getenv("USERPROFILE"), ".cargo")
+	if runtime.GOOS == "windows" {
+		if p := os.Getenv("USERPROFILE"); p != "" {
+			return filepath.Join(p, ".cargo")
+		}
+	}
+	if home, err := os.UserHomeDir(); err == nil {
+		return filepath.Join(home, ".cargo")
+	}
+	return ".cargo"
 }
 
 func (c *cargoDriver) runInstall(ctx context.Context, name, version string, force bool) error {
@@ -53,16 +62,7 @@ func (c *cargoDriver) runInstall(ctx context.Context, name, version string, forc
 
 func (c *cargoDriver) Install(ctx context.Context, spec types.PackageSpec) error {
 	force, _ := spec.Options["force"].(bool)
-
-	if err := c.runInstall(ctx, string(spec.Name), spec.Version, force); err != nil {
-		return err
-	}
-
-	if _, err := exec.LookPath(string(spec.Name)); err != nil {
-		return c.runInstall(ctx, string(spec.Name), spec.Version, true)
-	}
-
-	return nil
+	return c.runInstall(ctx, string(spec.Name), spec.Version, force)
 }
 
 func (c *cargoDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error {
