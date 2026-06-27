@@ -54,7 +54,7 @@ func SelfUpdate(ctx context.Context, repo, currentVersion string) (string, error
 	// Best-effort cleanup of a previous run's leftover on Windows.
 	_ = os.Remove(exe + ".to_remove")
 
-	rel, err := latestRelease(ctx, repo)
+	rel, err := LatestRelease(ctx, repo)
 	if err != nil {
 		return "", fmt.Errorf("fetch latest release: %w", err)
 	}
@@ -116,8 +116,8 @@ func SelfUpdate(ctx context.Context, repo, currentVersion string) (string, error
 	return latestVersion, nil
 }
 
-// latestRelease returns the latest non-prerelease of repo from the GitHub API.
-func latestRelease(ctx context.Context, repo string) (*Release, error) {
+// LatestRelease returns the latest non-prerelease of repo from the GitHub API.
+func LatestRelease(ctx context.Context, repo string) (*Release, error) {
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodGet,

@@ -14,11 +14,22 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-var getGrdVer string
+var (
+	getGrdVer    string
+	getGrdLatest bool
+)
 
 func runGetGrd() error {
 	ctx := context.Background()
 	version := getGrdVer
+
+	if getGrdLatest {
+		rel, err := selfupdate.LatestRelease(ctx, "lucidfrontier45/grd")
+		if err != nil {
+			return fmt.Errorf("fetch latest release: %w", err)
+		}
+		version = rel.TagName
+	}
 
 	grdPath, err := exec.LookPath("grd")
 	onPath := err == nil
@@ -148,4 +159,7 @@ var getGrdCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(getGrdCmd)
 	getGrdCmd.Flags().StringVarP(&getGrdVer, "version", "V", "0.9.1", "Version of grd to install")
+	getGrdCmd.Flags().
+		BoolVarP(&getGrdLatest, "latest", "U", false, "Install or upgrade to the latest release")
+	getGrdCmd.MarkFlagsMutuallyExclusive("version", "latest")
 }
