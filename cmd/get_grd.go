@@ -158,7 +158,7 @@ var getGrdCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(getGrdCmd)
-	getGrdCmd.Flags().StringVarP(&getGrdVer, "version", "V", "0.9.1", "Version of grd to install")
+	getGrdCmd.Flags().StringVarP(&getGrdVer, "version", "V", "0.9.2", "Version of grd to install")
 	getGrdCmd.Flags().
 		BoolVarP(&getGrdLatest, "latest", "U", false, "Install or upgrade to the latest release")
 	getGrdCmd.MarkFlagsMutuallyExclusive("version", "latest")
