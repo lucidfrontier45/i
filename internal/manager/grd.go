@@ -55,13 +55,11 @@ func (g *grdDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error {
 }
 
 func (g *grdDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
+	// grd remove does not accept --destination (or --bin-name); removing a
+	// package is keyed solely by its source repo name. Persisted options from
+	// `i add --destination ...` must therefore not be forwarded here —
+	// upstream grd would error with `unknown flag`. See issue #18.
 	args := []string{"remove", string(spec.Name)}
-	if dst, ok := spec.Options["destination"].(string); ok && dst != "" {
-		args = append(args, "--destination", dst)
-	}
-	if name, ok := spec.Options["bin-name"].(string); ok && name != "" {
-		args = append(args, "--bin-name", name)
-	}
 	out, err := cmdOutput(ctx, "grd", args...)
 	if err != nil {
 		return fmt.Errorf("grd remove: %w\n%s", err, strings.TrimSpace(string(out)))
