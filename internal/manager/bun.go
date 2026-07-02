@@ -3,7 +3,6 @@ package manager
 import (
 	"context"
 	"fmt"
-	"os/exec"
 	"strings"
 
 	"github.com/lucidfrontier45/i/internal/types"
@@ -17,10 +16,6 @@ func init() {
 
 func (b *bunDriver) Name() string {
 	return "bun"
-}
-
-func (b *bunDriver) Detect() bool {
-	return exec.Command("bun", "--version").Run() == nil
 }
 
 func (b *bunDriver) Install(ctx context.Context, spec types.PackageSpec) error {
@@ -56,12 +51,12 @@ func (b *bunDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
 	return nil
 }
 
-func (b *bunDriver) InstalledVersion(ctx context.Context, pkg string) (string, error) {
+func (b *bunDriver) InstalledVersion(ctx context.Context, spec types.PackageSpec) (string, error) {
 	out, err := cmdOutput(ctx, "bun", "pm", "ls", "-g")
 	if err != nil {
 		return "", fmt.Errorf("bun pm ls: %w", err)
 	}
-	prefix := pkg + "@"
+	prefix := string(spec.Name) + "@"
 	for _, line := range strings.Split(string(out), "\n") {
 		line = strings.TrimSpace(line)
 		line = strings.TrimPrefix(line, "├── ")

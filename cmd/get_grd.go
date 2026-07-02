@@ -68,7 +68,8 @@ func downloadGrd(ctx context.Context, dest, version string) error {
 		assetName += ".exe"
 	}
 
-	rel, err := selfupdate.ReleaseByTag(ctx, "lucidfrontier45/grd", version)
+	tag := strings.TrimPrefix(version, "v")
+	rel, err := selfupdate.ReleaseByTag(ctx, "lucidfrontier45/grd", tag)
 	if err != nil {
 		return fmt.Errorf("fetch release %s: %w", version, err)
 	}

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -22,10 +21,6 @@ func init() {
 
 func (c *cargoDriver) Name() string {
 	return "cargo"
-}
-
-func (c *cargoDriver) Detect() bool {
-	return exec.Command("cargo", "binstall", "--help").Run() == nil
 }
 
 func cargoHome() string {
@@ -77,7 +72,10 @@ func (c *cargoDriver) Remove(ctx context.Context, spec types.PackageSpec) error 
 	return nil
 }
 
-func (c *cargoDriver) InstalledVersion(ctx context.Context, pkg string) (string, error) {
+func (c *cargoDriver) InstalledVersion(
+	ctx context.Context,
+	spec types.PackageSpec,
+) (string, error) {
 	data, err := os.ReadFile(filepath.Join(cargoHome(), "binstall", "crates-v1.json"))
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -86,7 +84,7 @@ func (c *cargoDriver) InstalledVersion(ctx context.Context, pkg string) (string,
 		return "", fmt.Errorf("read binstall metadata: %w", err)
 	}
 	installed := parseBinstallCrates(data)
-	return installed[pkg], nil
+	return installed[string(spec.Name)], nil
 }
 
 func parseBinstallCrates(data []byte) map[string]string {

@@ -3,7 +3,6 @@ package manager
 import (
 	"context"
 	"fmt"
-	"os/exec"
 	"strings"
 
 	"github.com/lucidfrontier45/i/internal/types"
@@ -17,10 +16,6 @@ func init() {
 
 func (u *uvDriver) Name() string {
 	return "uv"
-}
-
-func (u *uvDriver) Detect() bool {
-	return exec.Command("uv", "--version").Run() == nil
 }
 
 func installPkgName(name string, features []string) string {
@@ -77,13 +72,13 @@ func (u *uvDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
 	return nil
 }
 
-func (u *uvDriver) InstalledVersion(ctx context.Context, pkg string) (string, error) {
+func (u *uvDriver) InstalledVersion(ctx context.Context, spec types.PackageSpec) (string, error) {
 	out, err := cmdOutput(ctx, "uv", "tool", "list")
 	if err != nil {
 		return "", fmt.Errorf("uv tool list: %w", err)
 	}
 	installed := parseUvToolList(string(out))
-	return installed[pkg], nil
+	return installed[string(spec.Name)], nil
 }
 
 func parseUvToolList(output string) map[string]string {

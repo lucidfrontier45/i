@@ -87,6 +87,15 @@ func runAdd(opts AddOptions, with []string, withChanged bool) error {
 	}
 
 	if existing, exists := cfg.Packages[pkg]; exists {
+		if mgr != existing.Manager {
+			return fmt.Errorf(
+				"package %q is managed by %q; run 'i remove %s' first to switch managers",
+				pkg,
+				existing.Manager,
+				pkg,
+			)
+		}
+
 		hasUpdate := aliasFlag != "" ||
 			(version != "" && version != existing.Version) ||
 			opts.FeaturesChanged || withChanged || len(options) > 0
@@ -113,8 +122,16 @@ func runAdd(opts AddOptions, with []string, withChanged bool) error {
 			merged.Features = features
 			changed = true
 		}
+		// Per-key merge: existing option keys are preserved; only keys present in
+		// this invocation are added or overwritten. There is no way to remove an
+		// option key via `add` today.
 		if len(options) > 0 {
-			merged.Options = options
+			if merged.Options == nil {
+				merged.Options = make(map[string]any)
+			}
+			for k, v := range options {
+				merged.Options[k] = v
+			}
 			changed = true
 		}
 
@@ -132,7 +149,7 @@ func runAdd(opts AddOptions, with []string, withChanged bool) error {
 
 			if installedVer, err := drv.InstalledVersion(
 				context.Background(),
-				string(pkg),
+				spec,
 			); err == nil && installedVer != "" {
 				merged.Version = installedVer
 			}
@@ -165,7 +182,7 @@ func runAdd(opts AddOptions, with []string, withChanged bool) error {
 
 	if installedVer, err := drv.InstalledVersion(
 		context.Background(),
-		string(pkg),
+		spec,
 	); err == nil && installedVer != "" {
 		version = installedVer
 	}

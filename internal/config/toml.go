@@ -23,6 +23,31 @@ type Config struct {
 	Packages map[types.PackageName]PackageEntry       `toml:"packages"`
 }
 
+// normalizeOptions coerces known array options (e.g. "with") from []any to []string
+// after TOML unmarshal. TOML unmarshal produces []any, but drivers expect []string.
+// This is idempotent and leaves scalar options untouched.
+func normalizeOptions(cfg *Config) {
+	for _, entry := range cfg.Packages {
+		if entry.Options == nil {
+			continue
+		}
+
+		// Coerce "with" option from []any to []string
+		if v, ok := entry.Options["with"]; ok {
+			if arr, ok := v.([]any); ok {
+				with := make([]string, 0, len(arr))
+				for _, elem := range arr {
+					if s, ok := elem.(string); ok {
+						with = append(with, s)
+					}
+					// Drop non-string elements (defensive)
+				}
+				entry.Options["with"] = with
+			}
+		}
+	}
+}
+
 // ResolveName maps a user-supplied key (which may be an alias) to the full
 // package name. If key is an alias in Index, the mapped full name is returned;
 // otherwise key is treated as the full package name itself.
@@ -57,6 +82,7 @@ func Read() (*Config, string, error) {
 		return nil, "", err
 	}
 
+	normalizeOptions(cfg)
 	return cfg, path, nil
 }
 

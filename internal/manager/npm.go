@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os/exec"
 
 	"github.com/lucidfrontier45/i/internal/types"
 )
@@ -17,10 +16,6 @@ func init() {
 
 func (n *npmDriver) Name() string {
 	return "npm"
-}
-
-func (n *npmDriver) Detect() bool {
-	return exec.Command("npm", "--version").Run() == nil
 }
 
 func (n *npmDriver) Install(ctx context.Context, spec types.PackageSpec) error {
@@ -56,12 +51,12 @@ func (n *npmDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
 	return nil
 }
 
-func (n *npmDriver) InstalledVersion(ctx context.Context, pkg string) (string, error) {
-	out, err := cmdOutput(ctx, "npm", "ls", "-g", pkg, "--json", "--depth=0")
+func (n *npmDriver) InstalledVersion(ctx context.Context, spec types.PackageSpec) (string, error) {
+	out, err := cmdOutput(ctx, "npm", "ls", "-g", string(spec.Name), "--json", "--depth=0")
 	if err != nil {
-		return "", fmt.Errorf("npm ls %s: %w", pkg, err)
+		return "", fmt.Errorf("npm ls %s: %w", spec.Name, err)
 	}
-	return parseNpmLsJSON(string(out), pkg), nil
+	return parseNpmLsJSON(string(out), string(spec.Name)), nil
 }
 
 func parseNpmLsJSON(output, pkg string) string {
