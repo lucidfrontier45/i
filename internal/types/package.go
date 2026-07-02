@@ -29,13 +29,11 @@ type PackageSpec struct {
 type Driver interface {
 	Name() string
 
-	Detect() bool
-
 	Install(ctx context.Context, spec PackageSpec) error
 
 	Upgrade(ctx context.Context, spec PackageSpec) error
 
 	Remove(ctx context.Context, spec PackageSpec) error
 
-	InstalledVersion(ctx context.Context, pkg string) (string, error)
+	InstalledVersion(ctx context.Context, spec PackageSpec) (string, error)
 }

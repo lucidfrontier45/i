@@ -21,10 +21,6 @@ func (g *goDriver) Name() string {
 	return "go"
 }
 
-func (g *goDriver) Detect() bool {
-	return exec.Command("go", "version").Run() == nil
-}
-
 func (g *goDriver) Install(ctx context.Context, spec types.PackageSpec) error {
 	version := spec.Version
 	if version == "" {
@@ -59,8 +55,8 @@ func (g *goDriver) Remove(_ context.Context, spec types.PackageSpec) error {
 	return nil
 }
 
-func (g *goDriver) InstalledVersion(ctx context.Context, pkg string) (string, error) {
-	binName := filepath.Base(pkg)
+func (g *goDriver) InstalledVersion(ctx context.Context, spec types.PackageSpec) (string, error) {
+	binName := binNameFromSpec(spec)
 	path, err := exec.LookPath(binName)
 	if err != nil {
 		return "", fmt.Errorf("go binary %q not found on PATH: %w", binName, err)

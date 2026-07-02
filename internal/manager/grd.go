@@ -3,7 +3,6 @@ package manager
 import (
 	"context"
 	"fmt"
-	"os/exec"
 	"strings"
 
 	"github.com/lucidfrontier45/i/internal/types"
@@ -17,10 +16,6 @@ func init() {
 
 func (g *grdDriver) Name() string {
 	return "grd"
-}
-
-func (g *grdDriver) Detect() bool {
-	return exec.Command("grd", "--version").Run() == nil
 }
 
 func (g *grdDriver) Install(ctx context.Context, spec types.PackageSpec) error {
@@ -67,10 +62,10 @@ func (g *grdDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
 	return nil
 }
 
-func (g *grdDriver) InstalledVersion(ctx context.Context, pkg string) (string, error) {
-	out, err := cmdOutput(ctx, "grd", "info", pkg)
+func (g *grdDriver) InstalledVersion(ctx context.Context, spec types.PackageSpec) (string, error) {
+	out, err := cmdOutput(ctx, "grd", "info", string(spec.Name))
 	if err != nil {
-		return "", fmt.Errorf("grd info %s: %w", pkg, err)
+		return "", fmt.Errorf("grd info %s: %w", spec.Name, err)
 	}
 	return parseGrdInfo(string(out)), nil
 }

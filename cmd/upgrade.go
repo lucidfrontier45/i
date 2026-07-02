@@ -49,7 +49,7 @@ func runUpgrade(key string) error {
 
 		if installedVer, err := drv.InstalledVersion(
 			context.Background(),
-			string(full),
+			spec,
 		); err == nil && installedVer != "" &&
 			installedVer != entry.Version {
 			entry.Version = installedVer
@@ -96,7 +96,7 @@ func runUpgrade(key string) error {
 
 		if installedVer, err := drv.InstalledVersion(
 			context.Background(),
-			string(name),
+			spec,
 		); err == nil && installedVer != "" &&
 			installedVer != entry.Version {
 			entry.Version = installedVer
@@ -133,5 +133,4 @@ var upgradeCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(upgradeCmd)
-	upgradeCmd.Flags().String("manager", "", "Package manager (bun, uv, cargo, grd, go, npm)")
 }

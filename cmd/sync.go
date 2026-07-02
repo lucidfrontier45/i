@@ -63,7 +63,7 @@ func runSync(force bool) error {
 
 		if installedVer, err := drv.InstalledVersion(
 			context.Background(),
-			string(name),
+			spec,
 		); err == nil && installedVer != "" &&
 			installedVer != entry.Version {
 			entry.Version = installedVer
