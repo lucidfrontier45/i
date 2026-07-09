@@ -64,7 +64,10 @@ func (u *uvDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error {
 }
 
 func (u *uvDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
-	pkg := installPkgName(string(spec.Name), spec.Features)
+	// uv tool uninstall keys tools by bare name and rejects extras
+	// (e.g. "ruff[test]"). Features are install-time only, so we pass
+	// string(spec.Name) directly — not installPkgName(...).
+	pkg := string(spec.Name)
 	out, err := cmdOutput(ctx, "uv", "tool", "uninstall", pkg)
 	if err != nil {
 		return fmt.Errorf("uv tool uninstall: %w\n%s", err, string(out))
