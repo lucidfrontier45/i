@@ -35,3 +35,4 @@ dist/
 # .vscode/
 
 .codegraph
+.todos
