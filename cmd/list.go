@@ -8,6 +8,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/lucidfrontier45/i/internal/config"
+	"github.com/lucidfrontier45/i/internal/types"
 	"github.com/spf13/cobra"
 )
 
@@ -30,19 +31,35 @@ func runList() error {
 		sort.Strings(aliases)
 	}
 
+	// Precompute manager per package name so the sort comparator avoids
+	// repeated map lookups. Output is grouped by manager then alphabetical.
+	managers := make(map[string]string, len(cfg.Packages))
+	names := make([]string, 0, len(cfg.Packages))
+	for name, entry := range cfg.Packages {
+		names = append(names, string(name))
+		managers[string(name)] = string(entry.Manager)
+	}
+	sort.Slice(names, func(i, j int) bool {
+		if managers[names[i]] != managers[names[j]] {
+			return managers[names[i]] < managers[names[j]]
+		}
+		return names[i] < names[j]
+	})
+
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	_, _ = fmt.Fprintln(w, "Package\tManager\tVersion\tAlias")
 	_, _ = fmt.Fprintln(w, "-------\t-------\t-------\t-----")
-	for name, entry := range cfg.Packages {
+	for _, name := range names {
+		entry := cfg.Packages[types.PackageName(name)]
 		version := entry.Version
 		if version == "" {
 			version = "latest"
 		}
-		alias := strings.Join(byPkg[string(name)], ", ")
+		alias := strings.Join(byPkg[name], ", ")
 		_, _ = fmt.Fprintf(
 			w,
 			"%s\t%s\t%s\t%s\n",
-			string(name),
+			name,
 			string(entry.Manager),
 			version,
 			alias,
