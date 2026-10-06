@@ -11,10 +11,57 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func showUpgradeResult(
+	name types.PackageName,
+	oldVersion string,
+	spec types.PackageSpec,
+	drv types.Driver,
+) error {
+	installedVersion, versionErr := drv.InstalledVersion(context.Background(), spec)
+	if versionErr != nil {
+		fmt.Printf("warning: could not determine installed version of %s: %v\n", name, versionErr)
+	}
+
+	cfg, _, err := config.Read()
+	if err != nil {
+		return fmt.Errorf("read config after upgrading %s: %w", name, err)
+	}
+	entry, ok := cfg.Packages[name]
+	if !ok {
+		return fmt.Errorf("package %q disappeared from config after upgrade", name)
+	}
+	if versionErr == nil && installedVersion != "" && installedVersion != entry.Version {
+		entry.Version = installedVersion
+		cfg.Packages[name] = entry
+		if _, err := config.Write(cfg); err != nil {
+			return fmt.Errorf("write config after upgrading %s: %w", name, err)
+		}
+	}
+
+	cfg, _, err = config.Read()
+	if err != nil {
+		return fmt.Errorf("read config after upgrading %s: %w", name, err)
+	}
+	latestVersion, ok := cfg.Packages[name]
+	if !ok {
+		return fmt.Errorf("package %q disappeared from config after upgrade", name)
+	}
+	if oldVersion == latestVersion.Version {
+		fmt.Printf(" no change\n")
+	} else {
+		fmt.Printf(" %s -> %s\n", oldVersion, latestVersion.Version)
+	}
+	return nil
+}
+
 func runUpgrade(key string) error {
 	cfg, _, err := config.Read()
 	if err != nil {
 		return fmt.Errorf("read config: %w", err)
+	}
+	oldVersions := make(map[types.PackageName]string, len(cfg.Packages))
+	for name, entry := range cfg.Packages {
+		oldVersions[name] = entry.Version
 	}
 
 	if len(cfg.Packages) == 0 {
@@ -42,28 +89,18 @@ func runUpgrade(key string) error {
 			Options:  entry.Options,
 		}
 
-		fmt.Printf("upgrading %s (%s)...\n", full, entry.Manager)
+		fmt.Printf("upgrading %s (%s)...", full, entry.Manager)
 		if err := drv.Upgrade(context.Background(), spec); err != nil {
 			return fmt.Errorf("upgrade %s: %w", full, err)
 		}
 
-		if installedVer, err := drv.InstalledVersion(
-			context.Background(),
-			spec,
-		); err == nil && installedVer != "" &&
-			installedVer != entry.Version {
-			entry.Version = installedVer
-			cfg.Packages[full] = entry
-			if _, err := config.Write(cfg); err != nil {
-				return fmt.Errorf("write config: %w", err)
-			}
+		if err := showUpgradeResult(full, oldVersions[full], spec, drv); err != nil {
+			return err
 		}
-
 		return nil
 	}
 
 	hasError := false
-	needsWrite := false
 	names := make([]string, 0, len(cfg.Packages))
 	for n := range cfg.Packages {
 		names = append(names, string(n))
@@ -87,27 +124,16 @@ func runUpgrade(key string) error {
 			Options:  entry.Options,
 		}
 
-		fmt.Printf("upgrading %s (%s)...\n", name, entry.Manager)
+		fmt.Printf("upgrading %s (%s)...", name, entry.Manager)
 		if err := drv.Upgrade(context.Background(), spec); err != nil {
 			fmt.Printf("error upgrading %s: %v\n", name, err)
 			hasError = true
 			continue
 		}
 
-		if installedVer, err := drv.InstalledVersion(
-			context.Background(),
-			spec,
-		); err == nil && installedVer != "" &&
-			installedVer != entry.Version {
-			entry.Version = installedVer
-			cfg.Packages[name] = entry
-			needsWrite = true
-		}
-	}
-
-	if needsWrite {
-		if _, err := config.Write(cfg); err != nil {
-			return fmt.Errorf("write config: %w", err)
+		if err := showUpgradeResult(name, oldVersions[name], spec, drv); err != nil {
+			fmt.Printf("error recording upgrade result for %s: %v\n", name, err)
+			hasError = true
 		}
 	}
 
