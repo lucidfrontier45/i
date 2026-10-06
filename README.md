@@ -60,6 +60,23 @@ i upgrade mypkg
 i remove mypkg
 ```
 
+A package may have several aliases at once; `--alias` adds one and keeps the
+others. Manage them after the fact with `i alias`, which edits config only and
+never reinstalls the package:
+
+```bash
+i alias set sp "@starlight-collective/astro"  # create
+i alias set sp @starlight-collective/astro   # no-op: already points there
+i alias set sp some/other-package             # refused, unless --force
+i alias list                                  # Alias / Package table
+i alias remove sp                             # drop just this alias
+```
+
+`<package>` may be a full package name or an existing alias. Re-pointing an
+alias that already maps to a different package is refused unless you pass
+`--force`. `i alias remove` takes the alias, not the package name; to drop
+every alias for a package, remove the package with `i remove <pkg>`.
+
 Some managers support features/extras using bracket syntax:
 
 ```bash
@@ -189,6 +206,7 @@ Each package manager implements the `types.Driver` interface (`internal/types/pa
 ```toml
 [index]
 myalias = "@user/package"
+sp = "@user/package"
 
 [packages."starship"]
 manager = "cargo"

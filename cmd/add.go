@@ -103,12 +103,9 @@ func runAdd(opts AddOptions, with []string, withChanged bool) error {
 			fmt.Printf("package %s already registered to %s\n", pkg, path)
 			return nil
 		}
+		// Additive: prior aliases pointing at pkg are kept. Many aliases may
+		// point at one package; `i alias remove` drops a single one.
 		if aliasFlag != "" {
-			for key, val := range cfg.Index {
-				if val == pkg {
-					delete(cfg.Index, key)
-				}
-			}
 			cfg.Index[aliasFlag] = pkg
 		}
 

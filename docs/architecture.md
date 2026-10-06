@@ -18,6 +18,7 @@ main.go
      ├─ root.go           persistent flags, startup cleanup
      ├─ add.go            register + install a package
      ├─ remove.go         uninstall + deregister
+    ├─ alias.go          set/list/remove aliases (config-only)
      ├─ list.go           table of registered packages
      ├─ sync.go           install all registered packages
      ├─ upgrade.go        upgrade one or all packages
@@ -70,7 +71,7 @@ Every driver self-registers in its `init()` via `manager.Register`. Adding a new
 
 Two-section structure:
 
-- **`Index`** — optional alias indirection (alias → full package name)
+- **`Index`** — optional alias indirection (alias → full package name). Many aliases may map to one package
 - **`Packages`** — canonical registry keyed by full name, each entry holds manager, version, features, and driver-specific options
 
 `config.ResolveName(key)` checks aliases first; if no match, the key is used as the package name directly.
@@ -124,4 +125,6 @@ The `self-upgrade` command downloads the latest GitHub release, verifies the SHA
 
 4. **No tests** — the project has no `*_test.go` files across any package.
 
-5. **Dependencies** — only three external modules: `BurntSushi/toml` (config), `spf13/cobra` (CLI), `golang.org/x/mod` (semver comparison in self-update).
+5. **Many aliases per package** — `Index` is many-to-one, not a 1:1 rename. `add -a` and `i alias set` both add without clearing prior aliases; `i alias remove <alias>` drops one, and `i remove <pkg>` sweeps them all. An alias may not shadow a registered package name, and re-pointing an existing alias requires `--force` so a shorthand is never silently moved onto a different package.
+
+6. **Dependencies** — only three external modules: `BurntSushi/toml` (config), `spf13/cobra` (CLI), `golang.org/x/mod` (semver comparison in self-update).
