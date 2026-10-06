@@ -18,6 +18,7 @@ type AddOptions struct {
 	Alias           string
 	Destination     string
 	BinName         string
+	Rename          string
 	Exclude         string
 	FeaturesChanged bool
 }
@@ -54,6 +55,9 @@ func runAdd(opts AddOptions, with []string, withChanged bool) error {
 	}
 	if opts.BinName != "" {
 		options["bin-name"] = opts.BinName
+	}
+	if opts.Rename != "" {
+		options["rename"] = opts.Rename
 	}
 	if opts.Exclude != "" {
 		options["exclude"] = opts.Exclude
@@ -219,13 +223,14 @@ var addCmd = &cobra.Command{
 		alias, _ := cmd.Flags().GetString("alias")
 		dest, _ := cmd.Flags().GetString("destination")
 		binName, _ := cmd.Flags().GetString("bin-name")
+		rename, _ := cmd.Flags().GetString("rename")
 		exclude, _ := cmd.Flags().GetString("exclude")
 		with, _ := cmd.Flags().GetStringSlice("with")
 		withChanged := cmd.Flags().Changed("with")
 		return runAdd(AddOptions{
 			Raw: args[0], Manager: mgr, Version: version,
 			Alias: alias, Destination: dest,
-			BinName: binName, Exclude: exclude,
+			BinName: binName, Rename: rename, Exclude: exclude,
 			FeaturesChanged: strings.Contains(args[0], "["),
 		}, with, withChanged)
 	},
@@ -240,6 +245,7 @@ func init() {
 		StringP("alias", "a", "", "Alias name to register the package under (defaults to the package name)")
 	addCmd.Flags().String("destination", "", "Destination directory (grd)")
 	addCmd.Flags().String("bin-name", "", "Override binary name (grd)")
+	addCmd.Flags().String("rename", "", "Rename the installed binary (grd)")
 	addCmd.Flags().String("exclude", "", "Comma-separated asset-name substrings to exclude (grd)")
 	addCmd.Flags().
 		StringSlice("with", nil, "Extra package(s) to include (uv only); repeatable or comma-separated, accepts name or name==version")

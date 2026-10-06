@@ -111,6 +111,7 @@ Pass these flags to `i add` when using `--manager grd`:
 | :-------------- | :----------------------------------------------- |
 | `--destination` | Destination directory for the binary             |
 | `--bin-name`    | Override the binary name after download          |
+| `--rename`      | Rename the installed binary                      |
 | `--exclude`     | Comma-separated asset-name substrings to exclude |
 
 ```bash

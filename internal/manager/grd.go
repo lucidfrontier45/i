@@ -70,7 +70,7 @@ func (g *grdDriver) InstalledVersion(ctx context.Context, spec types.PackageSpec
 	return parseGrdInfo(string(out)), nil
 }
 
-// appendCommonFlags adds destination, bin-name, and exclude from options
+// appendCommonFlags adds destination, bin-name, rename, and exclude from options
 // when they are present and non-empty.
 func (g *grdDriver) appendCommonFlags(args *[]string, opts map[string]any) {
 	if dst, ok := opts["destination"].(string); ok && dst != "" {
@@ -78,6 +78,9 @@ func (g *grdDriver) appendCommonFlags(args *[]string, opts map[string]any) {
 	}
 	if name, ok := opts["bin-name"].(string); ok && name != "" {
 		*args = append(*args, "--bin-name", name)
+	}
+	if rename, ok := opts["rename"].(string); ok && rename != "" {
+		*args = append(*args, "--rename", rename)
 	}
 	if excl, ok := opts["exclude"].(string); ok && excl != "" {
 		*args = append(*args, "--exclude", excl)
