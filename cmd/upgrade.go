@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/lucidfrontier45/i/internal/config"
@@ -87,17 +88,11 @@ func printVersionChange(name types.PackageName, oldVersion string) error {
 }
 
 func runUpgrade(keys []string) error {
-	cfg, _, err := readConfig()
+	cfg, names, ok, err := loadTargets(keys)
 	if err != nil {
 		return err
 	}
-
-	names, err := selectPackages(cfg, keys)
-	if err != nil {
-		return err
-	}
-	if len(names) == 0 {
-		fmt.Println("no packages registered")
+	if !ok {
 		return nil
 	}
 
@@ -106,22 +101,18 @@ func runUpgrade(keys []string) error {
 		oldVersions[name] = entry.Version
 	}
 
-	hasError := false
+	var errs []error
 	for _, name := range names {
 		if err := upgradePackage(cfg, name, oldVersions[name]); err != nil {
-			fmt.Printf("error upgrading %s: %v\n", name, err)
-			hasError = true
+			errs = append(errs, err)
 		}
 	}
-
-	if hasError {
-		return fmt.Errorf("some packages failed to upgrade")
-	}
-	return nil
+	return errors.Join(errs...)
 }
 
 // upgradePackage upgrades a single registered package to its latest version and
-// records the resulting version in the config.
+// records the resulting version in the config. Failures are returned wrapped
+// with the package name so the caller can report them together.
 func upgradePackage(
 	cfg *config.Config,
 	name types.PackageName,
@@ -131,14 +122,15 @@ func upgradePackage(
 
 	drv, err := lookupDriver(entry.Manager)
 	if err != nil {
-		return err
+		return fmt.Errorf("upgrade %s: %w", name, err)
 	}
 
 	spec := specFromEntry(name, entry)
 
 	fmt.Printf("upgrading %s (%s)...", name, entry.Manager)
 	if err := drv.Upgrade(context.Background(), spec); err != nil {
-		return err
+		fmt.Println()
+		return fmt.Errorf("upgrade %s: %w", name, err)
 	}
 
 	return showUpgradeResult(name, oldVersion, spec, drv)

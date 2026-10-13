@@ -86,3 +86,25 @@ func resolvePackageNames(
 	sort.Slice(names, func(i, j int) bool { return names[i] < names[j] })
 	return names, nil
 }
+
+// loadTargets loads the config and resolves the canonical package names a
+// command should act on. When there is nothing to act on it prints a notice and
+// returns ok=false so the caller can exit cleanly.
+func loadTargets(
+	keys []string,
+) (*config.Config, []types.PackageName, bool, error) {
+	cfg, _, err := readConfig()
+	if err != nil {
+		return nil, nil, false, err
+	}
+
+	names, err := selectPackages(cfg, keys)
+	if err != nil {
+		return nil, nil, false, err
+	}
+	if len(names) == 0 {
+		fmt.Println("no packages registered")
+		return cfg, nil, false, nil
+	}
+	return cfg, names, true, nil
+}

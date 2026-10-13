@@ -11,17 +11,11 @@ import (
 )
 
 func runSync(force bool, keys []string) error {
-	cfg, _, err := readConfig()
+	cfg, names, ok, err := loadTargets(keys)
 	if err != nil {
 		return err
 	}
-
-	names, err := selectPackages(cfg, keys)
-	if err != nil {
-		return err
-	}
-	if len(names) == 0 {
-		fmt.Println("no packages registered")
+	if !ok {
 		return nil
 	}
 
