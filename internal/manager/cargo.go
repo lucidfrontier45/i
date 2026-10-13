@@ -87,50 +87,65 @@ func (c *cargoDriver) InstalledVersion(
 	return installed[string(spec.Name)], nil
 }
 
+// binstallCrate is a single record from cargo-binstall's crates metadata.
+type binstallCrate struct {
+	Name    string `json:"name"`
+	Version string `json:"current_version"`
+}
+
 func parseBinstallCrates(data []byte) map[string]string {
+	if result := decodeCratesStream(data); len(result) > 0 {
+		return result
+	}
+	// Fallback: try extracting from the raw text if JSON decoder got nothing
+	return parseCratesFallback(data)
+}
+
+// decodeCratesStream decodes a stream of concatenated JSON crate records.
+func decodeCratesStream(data []byte) map[string]string {
 	result := make(map[string]string)
 	dec := json.NewDecoder(bytes.NewReader(data))
 	for {
-		var entry struct {
-			Name    string `json:"name"`
-			Version string `json:"current_version"`
-		}
+		var entry binstallCrate
 		if err := dec.Decode(&entry); err != nil {
 			break
 		}
-		if entry.Name != "" && entry.Version != "" {
-			if _, exists := result[entry.Name]; !exists {
-				result[entry.Name] = entry.Version
-			}
-		}
-	}
-	// Fallback: try extracting from the raw text if JSON decoder got nothing
-	if len(result) == 0 {
-		raw := string(data)
-		for _, block := range strings.Split(raw, `}{`) {
-			block = strings.TrimSpace(block)
-			if block == "" {
-				continue
-			}
-			if !strings.HasPrefix(block, "{") {
-				block = "{" + block
-			}
-			if !strings.HasSuffix(block, "}") {
-				block = block + "}"
-			}
-			var entry struct {
-				Name    string `json:"name"`
-				Version string `json:"current_version"`
-			}
-			if err := json.Unmarshal([]byte(block), &entry); err != nil {
-				continue
-			}
-			if entry.Name != "" && entry.Version != "" {
-				if _, exists := result[entry.Name]; !exists {
-					result[entry.Name] = entry.Version
-				}
-			}
-		}
+		recordCrate(result, entry)
 	}
 	return result
+}
+
+// parseCratesFallback recovers crate records from a raw text blob by splitting
+// on the `}{` boundary, for inputs the JSON stream decoder cannot handle.
+func parseCratesFallback(data []byte) map[string]string {
+	result := make(map[string]string)
+	for _, block := range strings.Split(string(data), `}{`) {
+		block = strings.TrimSpace(block)
+		if block == "" {
+			continue
+		}
+		if !strings.HasPrefix(block, "{") {
+			block = "{" + block
+		}
+		if !strings.HasSuffix(block, "}") {
+			block = block + "}"
+		}
+		var entry binstallCrate
+		if err := json.Unmarshal([]byte(block), &entry); err != nil {
+			continue
+		}
+		recordCrate(result, entry)
+	}
+	return result
+}
+
+// recordCrate stores a non-empty crate record, keeping the first version seen
+// for a given name.
+func recordCrate(result map[string]string, entry binstallCrate) {
+	if entry.Name == "" || entry.Version == "" {
+		return
+	}
+	if _, exists := result[entry.Name]; !exists {
+		result[entry.Name] = entry.Version
+	}
 }
