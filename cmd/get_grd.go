@@ -11,7 +11,6 @@ import (
 
 	"github.com/lucidfrontier45/i/internal/selfupdate"
 	"github.com/spf13/cobra"
-	"golang.org/x/mod/semver"
 )
 
 var (
@@ -48,7 +47,7 @@ func runGetGrd() error {
 		return fmt.Errorf("get grd version: %w", err)
 	}
 
-	if semver.Compare(normalizeV(currentVer), normalizeV(version)) >= 0 {
+	if selfupdate.CompareVersions(currentVer, version) >= 0 {
 		fmt.Printf("grd %s is already up to date\n", currentVer)
 		return nil
 	}
@@ -135,13 +134,6 @@ func goosArchToRustTarget(goos, goarch string) (string, bool) {
 	default:
 		return "", false
 	}
-}
-
-func normalizeV(v string) string {
-	if !strings.HasPrefix(v, "v") {
-		return "v" + v
-	}
-	return v
 }
 
 var getGrdCmd = &cobra.Command{

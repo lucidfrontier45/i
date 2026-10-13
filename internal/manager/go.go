@@ -26,21 +26,11 @@ func (g *goDriver) Install(ctx context.Context, spec types.PackageSpec) error {
 	if version == "" {
 		version = "latest"
 	}
-	pkg := string(spec.Name) + "@" + version
-	out, err := cmdOutput(ctx, "go", "install", pkg)
-	if err != nil {
-		return fmt.Errorf("go install: %w\n%s", err, string(out))
-	}
-	return nil
+	return runTool(ctx, "go", "install", "install", pinVersion(string(spec.Name), version))
 }
 
 func (g *goDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error {
-	pkg := string(spec.Name) + "@latest"
-	out, err := cmdOutput(ctx, "go", "install", pkg)
-	if err != nil {
-		return fmt.Errorf("go upgrade: %w\n%s", err, string(out))
-	}
-	return nil
+	return runTool(ctx, "go", "upgrade", "install", pinVersion(string(spec.Name), "latest"))
 }
 
 func (g *goDriver) Remove(_ context.Context, spec types.PackageSpec) error {

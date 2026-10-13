@@ -38,14 +38,10 @@ func (u *uvDriver) Install(ctx context.Context, spec types.PackageSpec) error {
 			args = append(args, "--with", w)
 		}
 	}
-	if force, ok := spec.Options["force"].(bool); ok && force {
+	if forceOption(spec.Options) {
 		args = append(args, "--reinstall")
 	}
-	out, err := cmdOutput(ctx, "uv", args...)
-	if err != nil {
-		return fmt.Errorf("uv tool install: %w\n%s", err, string(out))
-	}
-	return nil
+	return runTool(ctx, "uv", "tool install", args...)
 }
 
 func (u *uvDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error {
@@ -56,11 +52,7 @@ func (u *uvDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error {
 			args = append(args, "--with", w)
 		}
 	}
-	out, err := cmdOutput(ctx, "uv", args...)
-	if err != nil {
-		return fmt.Errorf("uv tool upgrade: %w\n%s", err, string(out))
-	}
-	return nil
+	return runTool(ctx, "uv", "tool upgrade", args...)
 }
 
 func (u *uvDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
@@ -68,11 +60,7 @@ func (u *uvDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
 	// (e.g. "ruff[test]"). Features are install-time only, so we pass
 	// string(spec.Name) directly — not installPkgName(...).
 	pkg := string(spec.Name)
-	out, err := cmdOutput(ctx, "uv", "tool", "uninstall", pkg)
-	if err != nil {
-		return fmt.Errorf("uv tool uninstall: %w\n%s", err, string(out))
-	}
-	return nil
+	return runTool(ctx, "uv", "tool uninstall", "tool", "uninstall", pkg)
 }
 
 func (u *uvDriver) InstalledVersion(ctx context.Context, spec types.PackageSpec) (string, error) {

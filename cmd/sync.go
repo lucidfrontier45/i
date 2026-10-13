@@ -6,15 +6,14 @@ import (
 	"sort"
 
 	"github.com/lucidfrontier45/i/internal/config"
-	"github.com/lucidfrontier45/i/internal/manager"
 	"github.com/lucidfrontier45/i/internal/types"
 	"github.com/spf13/cobra"
 )
 
 func runSync(force bool) error {
-	cfg, _, err := config.Read()
+	cfg, _, err := readConfig()
 	if err != nil {
-		return fmt.Errorf("read config: %w", err)
+		return err
 	}
 
 	if len(cfg.Packages) == 0 {
@@ -36,8 +35,8 @@ func runSync(force bool) error {
 	}
 
 	if needsWrite {
-		if _, err := config.Write(cfg); err != nil {
-			return fmt.Errorf("write config: %w", err)
+		if _, err := writeConfig(cfg); err != nil {
+			return err
 		}
 	}
 
@@ -59,10 +58,10 @@ func syncPackage(
 	entry := cfg.Packages[name]
 	fmt.Printf("syncing %s (%s@%s)...\n", name, entry.Manager, entry.Version)
 
-	drv := manager.Lookup(string(entry.Manager))
-	if drv == nil {
-		fmt.Printf("error: unknown manager %q\n", entry.Manager)
-		return false, fmt.Errorf("unknown manager %q", entry.Manager)
+	drv, err := lookupDriver(entry.Manager)
+	if err != nil {
+		fmt.Printf("error: %v\n", err)
+		return false, err
 	}
 
 	spec := specFromEntry(name, entry)
@@ -106,6 +105,25 @@ func sortedNames(pkgs map[types.PackageName]config.PackageEntry) []types.Package
 		names = append(names, n)
 	}
 	sort.Slice(names, func(i, j int) bool { return names[i] < names[j] })
+	return names
+}
+
+// sortedNamesByManager returns the registered package names grouped by manager
+// and alphabetical within each group.
+func sortedNamesByManager(
+	pkgs map[types.PackageName]config.PackageEntry,
+) []types.PackageName {
+	names := make([]types.PackageName, 0, len(pkgs))
+	for n := range pkgs {
+		names = append(names, n)
+	}
+	sort.Slice(names, func(i, j int) bool {
+		mi, mj := pkgs[names[i]].Manager, pkgs[names[j]].Manager
+		if mi != mj {
+			return mi < mj
+		}
+		return names[i] < names[j]
+	})
 	return names
 }
 

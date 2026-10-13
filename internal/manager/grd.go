@@ -18,20 +18,26 @@ func (g *grdDriver) Name() string {
 	return "grd"
 }
 
+// run executes grd and wraps a failure with the action label, trimming the
+// captured output (grd pads its output with blank lines).
+func (g *grdDriver) run(ctx context.Context, action string, args ...string) error {
+	out, err := cmdOutput(ctx, "grd", args...)
+	if err != nil {
+		return fmt.Errorf("grd %s: %w\n%s", action, err, strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
 func (g *grdDriver) Install(ctx context.Context, spec types.PackageSpec) error {
 	args := []string{string(spec.Name), "-y"}
 	if spec.Version != "" {
 		args = append(args, "--tag", spec.Version)
 	}
 	g.appendCommonFlags(&args, spec.Options)
-	if force, ok := spec.Options["force"].(bool); ok && force {
+	if forceOption(spec.Options) {
 		args = append(args, "--force")
 	}
-	out, err := cmdOutput(ctx, "grd", args...)
-	if err != nil {
-		return fmt.Errorf("grd install: %w\n%s", err, strings.TrimSpace(string(out)))
-	}
-	return nil
+	return g.run(ctx, "install", args...)
 }
 
 func (g *grdDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error {
@@ -39,14 +45,10 @@ func (g *grdDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error {
 	// is not a TTY, which is always the case under `i`.
 	args := []string{string(spec.Name), "-y"}
 	g.appendCommonFlags(&args, spec.Options)
-	if force, ok := spec.Options["force"].(bool); ok && force {
+	if forceOption(spec.Options) {
 		args = append(args, "--force")
 	}
-	out, err := cmdOutput(ctx, "grd", args...)
-	if err != nil {
-		return fmt.Errorf("grd upgrade: %w\n%s", err, strings.TrimSpace(string(out)))
-	}
-	return nil
+	return g.run(ctx, "upgrade", args...)
 }
 
 func (g *grdDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
@@ -54,12 +56,7 @@ func (g *grdDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
 	// package is keyed solely by its source repo name. Persisted options from
 	// `i add --destination ...` must therefore not be forwarded here —
 	// upstream grd would error with `unknown flag`. See issue #18.
-	args := []string{"remove", string(spec.Name)}
-	out, err := cmdOutput(ctx, "grd", args...)
-	if err != nil {
-		return fmt.Errorf("grd remove: %w\n%s", err, strings.TrimSpace(string(out)))
-	}
-	return nil
+	return g.run(ctx, "remove", "remove", string(spec.Name))
 }
 
 func (g *grdDriver) InstalledVersion(ctx context.Context, spec types.PackageSpec) (string, error) {
