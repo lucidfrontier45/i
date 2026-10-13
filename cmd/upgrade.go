@@ -86,13 +86,17 @@ func printVersionChange(name types.PackageName, oldVersion string) error {
 	return nil
 }
 
-func runUpgrade(key string) error {
+func runUpgrade(keys []string) error {
 	cfg, _, err := readConfig()
 	if err != nil {
 		return err
 	}
 
-	if len(cfg.Packages) == 0 {
+	names, err := selectPackages(cfg, keys)
+	if err != nil {
+		return err
+	}
+	if len(names) == 0 {
 		fmt.Println("no packages registered")
 		return nil
 	}
@@ -102,65 +106,10 @@ func runUpgrade(key string) error {
 		oldVersions[name] = entry.Version
 	}
 
-	if key != "" {
-		return upgradeOne(cfg, oldVersions, key)
-	}
-	return upgradeAll(cfg, oldVersions)
-}
-
-// upgradeOne upgrades the single package addressed by key.
-func upgradeOne(
-	cfg *config.Config,
-	oldVersions map[types.PackageName]string,
-	key string,
-) error {
-	full, entry, err := requirePackage(cfg, key)
-	if err != nil {
-		return err
-	}
-
-	drv, err := lookupDriver(entry.Manager)
-	if err != nil {
-		return err
-	}
-
-	spec := specFromEntry(full, entry)
-
-	fmt.Printf("upgrading %s (%s)...", full, entry.Manager)
-	if err := drv.Upgrade(context.Background(), spec); err != nil {
-		return fmt.Errorf("upgrade %s: %w", full, err)
-	}
-
-	return showUpgradeResult(full, oldVersions[full], spec, drv)
-}
-
-// upgradeAll upgrades every registered package, continuing past failures.
-func upgradeAll(
-	cfg *config.Config,
-	oldVersions map[types.PackageName]string,
-) error {
 	hasError := false
-	for _, name := range sortedNames(cfg.Packages) {
-		entry := cfg.Packages[name]
-
-		drv, err := lookupDriver(entry.Manager)
-		if err != nil {
-			fmt.Printf("error: %v\n", err)
-			hasError = true
-			continue
-		}
-
-		spec := specFromEntry(name, entry)
-
-		fmt.Printf("upgrading %s (%s)...", name, entry.Manager)
-		if err := drv.Upgrade(context.Background(), spec); err != nil {
+	for _, name := range names {
+		if err := upgradePackage(cfg, name, oldVersions[name]); err != nil {
 			fmt.Printf("error upgrading %s: %v\n", name, err)
-			hasError = true
-			continue
-		}
-
-		if err := showUpgradeResult(name, oldVersions[name], spec, drv); err != nil {
-			fmt.Printf("error recording upgrade result for %s: %v\n", name, err)
 			hasError = true
 		}
 	}
@@ -171,16 +120,36 @@ func upgradeAll(
 	return nil
 }
 
+// upgradePackage upgrades a single registered package to its latest version and
+// records the resulting version in the config.
+func upgradePackage(
+	cfg *config.Config,
+	name types.PackageName,
+	oldVersion string,
+) error {
+	entry := cfg.Packages[name]
+
+	drv, err := lookupDriver(entry.Manager)
+	if err != nil {
+		return err
+	}
+
+	spec := specFromEntry(name, entry)
+
+	fmt.Printf("upgrading %s (%s)...", name, entry.Manager)
+	if err := drv.Upgrade(context.Background(), spec); err != nil {
+		return err
+	}
+
+	return showUpgradeResult(name, oldVersion, spec, drv)
+}
+
 var upgradeCmd = &cobra.Command{
-	Use:   "upgrade [package]",
-	Short: "Upgrade one or all registered packages to the latest version",
-	Args:  cobra.MaximumNArgs(1),
+	Use:   "upgrade [package...]",
+	Short: "Upgrade registered packages to the latest version",
+	Args:  cobra.ArbitraryArgs,
 	RunE: func(_ *cobra.Command, args []string) error {
-		key := ""
-		if len(args) == 1 {
-			key = args[0]
-		}
-		return runUpgrade(key)
+		return runUpgrade(args)
 	},
 }
 

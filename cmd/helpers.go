@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/lucidfrontier45/i/internal/config"
 	"github.com/lucidfrontier45/i/internal/manager"
@@ -47,4 +48,41 @@ func requirePackage(
 		return "", config.PackageEntry{}, fmt.Errorf("package %q not found in config", key)
 	}
 	return full, entry, nil
+}
+
+// selectPackages returns the canonical names a command should act on: the
+// resolved subset when keys is non-empty, otherwise every registered package in
+// ascending order.
+func selectPackages(
+	cfg *config.Config,
+	keys []string,
+) ([]types.PackageName, error) {
+	if len(keys) == 0 {
+		return sortedNames(cfg.Packages), nil
+	}
+	return resolvePackageNames(cfg, keys)
+}
+
+// resolvePackageNames maps CLI keys (aliases or full names) to canonical package
+// names, erroring on the first unknown key. Duplicates are collapsed and the
+// result is sorted so a repeated key never acts twice and output is stable.
+func resolvePackageNames(
+	cfg *config.Config,
+	keys []string,
+) ([]types.PackageName, error) {
+	names := make([]types.PackageName, 0, len(keys))
+	seen := make(map[types.PackageName]bool, len(keys))
+	for _, key := range keys {
+		full, _, err := requirePackage(cfg, key)
+		if err != nil {
+			return nil, err
+		}
+		if seen[full] {
+			continue
+		}
+		seen[full] = true
+		names = append(names, full)
+	}
+	sort.Slice(names, func(i, j int) bool { return names[i] < names[j] })
+	return names, nil
 }

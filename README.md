@@ -148,13 +148,14 @@ $ i -v sync
 + uv tool install ruff
 ```
 
-### Sync all packages
+### Sync packages
 
 ```bash
-i sync
+i sync              # sync all registered packages
+i sync <pkg>...     # sync specific package(s)
 ```
 
-Install all registered packages at their specified versions. Use `--force` / `-f` to reinstall even if already present:
+Install registered packages at their specified versions. Use `--force` / `-f` to reinstall even if already present:
 
 ```bash
 i sync --force
@@ -163,9 +164,12 @@ i sync --force
 ### Upgrade packages
 
 ```bash
-i upgrade       # upgrade all registered packages
-i upgrade <pkg> # upgrade a specific package
+i upgrade             # upgrade all registered packages
+i upgrade <pkg>...    # upgrade specific package(s)
 ```
+
+Both `sync` and `upgrade` accept any number of package names (or aliases);
+omit them to act on every registered package.
 
 ### Get grd
 

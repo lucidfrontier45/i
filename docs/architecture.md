@@ -20,8 +20,8 @@ main.go
      ├─ remove.go         uninstall + deregister
     ├─ alias.go          set/list/remove aliases (config-only)
      ├─ list.go           table of registered packages
-     ├─ sync.go           install all registered packages
-     ├─ upgrade.go        upgrade one or all packages
+     ├─ sync.go           install registered packages (all, or a named subset)
+     ├─ upgrade.go        upgrade registered packages (all, or a named subset)
      ├─ self_upgrade.go   replace the running i binary
      └─ version.go        build info
  ├─ internal/
