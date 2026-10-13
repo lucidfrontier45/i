@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/lucidfrontier45/i/internal/config"
-	"github.com/lucidfrontier45/i/internal/manager"
 	"github.com/lucidfrontier45/i/internal/types"
 	"github.com/spf13/cobra"
 )
@@ -22,6 +21,29 @@ func showUpgradeResult(
 	return printVersionChange(name, oldVersion)
 }
 
+// loadEntryAfterUpgrade reloads the config and returns it with name's entry,
+// sharing the read-and-require logic between the two post-upgrade steps.
+func loadEntryAfterUpgrade(
+	name types.PackageName,
+) (*config.Config, config.PackageEntry, error) {
+	cfg, _, err := config.Read()
+	if err != nil {
+		return nil, config.PackageEntry{}, fmt.Errorf(
+			"read config after upgrading %s: %w",
+			name,
+			err,
+		)
+	}
+	entry, ok := cfg.Packages[name]
+	if !ok {
+		return nil, config.PackageEntry{}, fmt.Errorf(
+			"package %q disappeared from config after upgrade",
+			name,
+		)
+	}
+	return cfg, entry, nil
+}
+
 // recordInstalledVersion refreshes the recorded version of name with the version
 // the driver reports, if it can be determined.
 func recordInstalledVersion(
@@ -34,13 +56,9 @@ func recordInstalledVersion(
 		fmt.Printf("warning: could not determine installed version of %s: %v\n", name, versionErr)
 	}
 
-	cfg, _, err := config.Read()
+	cfg, entry, err := loadEntryAfterUpgrade(name)
 	if err != nil {
-		return fmt.Errorf("read config after upgrading %s: %w", name, err)
-	}
-	entry, ok := cfg.Packages[name]
-	if !ok {
-		return fmt.Errorf("package %q disappeared from config after upgrade", name)
+		return err
 	}
 	if versionErr != nil || installedVersion == "" || installedVersion == entry.Version {
 		return nil
@@ -56,13 +74,9 @@ func recordInstalledVersion(
 
 // printVersionChange reports how name's recorded version changed after upgrade.
 func printVersionChange(name types.PackageName, oldVersion string) error {
-	cfg, _, err := config.Read()
+	_, entry, err := loadEntryAfterUpgrade(name)
 	if err != nil {
-		return fmt.Errorf("read config after upgrading %s: %w", name, err)
-	}
-	entry, ok := cfg.Packages[name]
-	if !ok {
-		return fmt.Errorf("package %q disappeared from config after upgrade", name)
+		return err
 	}
 	if oldVersion == entry.Version {
 		fmt.Printf(" no change\n")
@@ -73,9 +87,9 @@ func printVersionChange(name types.PackageName, oldVersion string) error {
 }
 
 func runUpgrade(key string) error {
-	cfg, _, err := config.Read()
+	cfg, _, err := readConfig()
 	if err != nil {
-		return fmt.Errorf("read config: %w", err)
+		return err
 	}
 
 	if len(cfg.Packages) == 0 {
@@ -100,15 +114,14 @@ func upgradeOne(
 	oldVersions map[types.PackageName]string,
 	key string,
 ) error {
-	full := cfg.ResolveName(key)
-	entry, ok := cfg.Packages[full]
-	if !ok {
-		return fmt.Errorf("package %q not found in config", key)
+	full, entry, err := requirePackage(cfg, key)
+	if err != nil {
+		return err
 	}
 
-	drv := manager.Lookup(string(entry.Manager))
-	if drv == nil {
-		return fmt.Errorf("unknown manager %q", entry.Manager)
+	drv, err := lookupDriver(entry.Manager)
+	if err != nil {
+		return err
 	}
 
 	spec := specFromEntry(full, entry)
@@ -130,9 +143,9 @@ func upgradeAll(
 	for _, name := range sortedNames(cfg.Packages) {
 		entry := cfg.Packages[name]
 
-		drv := manager.Lookup(string(entry.Manager))
-		if drv == nil {
-			fmt.Printf("error: unknown manager %q\n", entry.Manager)
+		drv, err := lookupDriver(entry.Manager)
+		if err != nil {
+			fmt.Printf("error: %v\n", err)
 			hasError = true
 			continue
 		}

@@ -39,25 +39,15 @@ func cargoHome() string {
 }
 
 func (c *cargoDriver) runInstall(ctx context.Context, name, version string, force bool) error {
-	args := []string{"binstall", "-y"}
-	if version != "" {
-		args = append(args, name+"@"+version)
-	} else {
-		args = append(args, name)
-	}
+	args := []string{"binstall", "-y", pinVersion(name, version)}
 	if force {
 		args = append(args, "--force")
 	}
-	out, err := cmdOutput(ctx, "cargo", args...)
-	if err != nil {
-		return fmt.Errorf("cargo binstall: %w\n%s", err, string(out))
-	}
-	return nil
+	return runTool(ctx, "cargo", "binstall", args...)
 }
 
 func (c *cargoDriver) Install(ctx context.Context, spec types.PackageSpec) error {
-	force, _ := spec.Options["force"].(bool)
-	return c.runInstall(ctx, string(spec.Name), spec.Version, force)
+	return c.runInstall(ctx, string(spec.Name), spec.Version, forceOption(spec.Options))
 }
 
 func (c *cargoDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error {
@@ -65,11 +55,7 @@ func (c *cargoDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error
 }
 
 func (c *cargoDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
-	out, err := cmdOutput(ctx, "cargo", "uninstall", string(spec.Name))
-	if err != nil {
-		return fmt.Errorf("cargo uninstall: %w\n%s", err, string(out))
-	}
-	return nil
+	return runTool(ctx, "cargo", "uninstall", "uninstall", string(spec.Name))
 }
 
 func (c *cargoDriver) InstalledVersion(

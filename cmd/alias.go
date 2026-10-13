@@ -19,9 +19,9 @@ func runAliasSet(alias, pkgKey string, force bool) error {
 		return fmt.Errorf("alias must not be empty")
 	}
 
-	cfg, _, err := config.Read()
+	cfg, _, err := readConfig()
 	if err != nil {
-		return fmt.Errorf("read config: %w", err)
+		return err
 	}
 
 	aliasKey := types.PackageAlias(alias)
@@ -37,9 +37,9 @@ func runAliasSet(alias, pkgKey string, force bool) error {
 	}
 
 	cfg.Index[aliasKey] = pkg
-	path, err := config.Write(cfg)
+	path, err := writeConfig(cfg)
 	if err != nil {
-		return fmt.Errorf("write config: %w", err)
+		return err
 	}
 
 	printAliasSetResult(aliasKey, pkg, previous, path, exists)
@@ -110,9 +110,9 @@ func printAliasSetResult(
 
 // runAliasList prints every alias paired with its full package name.
 func runAliasList() error {
-	cfg, _, err := config.Read()
+	cfg, _, err := readConfig()
 	if err != nil {
-		return fmt.Errorf("read config: %w", err)
+		return err
 	}
 
 	if len(cfg.Index) == 0 {
@@ -140,9 +140,9 @@ func runAliasList() error {
 // alias: a package name is not accepted, and the package and its install are
 // left untouched. Dropping every alias for a package is `i remove <pkg>`.
 func runAliasRemove(alias string) error {
-	cfg, path, err := config.Read()
+	cfg, path, err := readConfig()
 	if err != nil {
-		return fmt.Errorf("read config: %w", err)
+		return err
 	}
 
 	aliasKey := types.PackageAlias(alias)
@@ -151,8 +151,8 @@ func runAliasRemove(alias string) error {
 	}
 
 	delete(cfg.Index, aliasKey)
-	if _, err := config.Write(cfg); err != nil {
-		return fmt.Errorf("write config: %w", err)
+	if _, err := writeConfig(cfg); err != nil {
+		return err
 	}
 
 	fmt.Printf("removed alias %s from %s\n", aliasKey, path)

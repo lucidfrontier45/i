@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/lucidfrontier45/i/internal/config"
-	"github.com/lucidfrontier45/i/internal/manager"
 	"github.com/lucidfrontier45/i/internal/types"
 	"github.com/spf13/cobra"
 )
@@ -23,32 +22,81 @@ type AddOptions struct {
 	FeaturesChanged bool
 }
 
+// addUpdate carries the resolved inputs shared by the existing-package and
+// new-package paths of `i add`.
+type addUpdate struct {
+	pkg             types.PackageName
+	mgr             types.ManagerType
+	version         string
+	features        []string
+	options         map[string]any
+	aliasFlag       types.PackageAlias
+	featuresChanged bool
+	withChanged     bool
+}
+
 func runAdd(opts AddOptions, with []string, withChanged bool) error {
-	raw := opts.Raw
+	up, err := parseAddRequest(opts, with, withChanged)
+	if err != nil {
+		return err
+	}
 
-	pkgStr, features := parseBracket(raw)
+	if _, err := config.EnsureDir(); err != nil {
+		return fmt.Errorf("create config dir: %w", err)
+	}
+
+	cfg, path, err := readConfig()
+	if err != nil {
+		return err
+	}
+
+	if up.aliasFlag != "" {
+		if err := checkAliasConflict(cfg, up.aliasFlag, up.pkg); err != nil {
+			return err
+		}
+	}
+
+	drv, err := lookupDriver(up.mgr)
+	if err != nil {
+		return err
+	}
+
+	if _, exists := cfg.Packages[up.pkg]; exists {
+		return updateExistingPackage(cfg, path, drv, up)
+	}
+	return createNewPackage(cfg, path, drv, up)
+}
+
+// parseAddRequest validates the CLI inputs and resolves them into an addUpdate.
+func parseAddRequest(opts AddOptions, with []string, withChanged bool) (addUpdate, error) {
+	pkgStr, features := parseBracket(opts.Raw)
 	if pkgStr == "" {
-		return fmt.Errorf("invalid package name %q", raw)
+		return addUpdate{}, fmt.Errorf("invalid package name %q", opts.Raw)
 	}
-	pkg := types.PackageName(pkgStr)
-
-	mgrStr := opts.Manager
-	if mgrStr == "" {
-		return fmt.Errorf("--manager is required")
+	if opts.Manager == "" {
+		return addUpdate{}, fmt.Errorf("--manager is required")
 	}
-	mgr := types.ManagerType(mgrStr)
+	mgr := types.ManagerType(opts.Manager)
 
 	with = filterEmpty(with)
 	if len(with) > 0 && mgr != types.ManagerUv {
-		return fmt.Errorf("--with is only valid with --manager uv")
+		return addUpdate{}, fmt.Errorf("--with is only valid with --manager uv")
 	}
 
-	version := opts.Version
-	var aliasFlag types.PackageAlias
-	if opts.Alias != "" {
-		aliasFlag = types.PackageAlias(opts.Alias)
-	}
+	return addUpdate{
+		pkg:             types.PackageName(pkgStr),
+		mgr:             mgr,
+		version:         opts.Version,
+		features:        features,
+		options:         buildAddOptions(opts, with),
+		aliasFlag:       types.PackageAlias(opts.Alias),
+		featuresChanged: opts.FeaturesChanged,
+		withChanged:     withChanged,
+	}, nil
+}
 
+// buildAddOptions assembles the driver-specific option map from the CLI flags.
+func buildAddOptions(opts AddOptions, with []string) map[string]any {
 	options := make(map[string]any)
 	if opts.Destination != "" {
 		options["destination"] = opts.Destination
@@ -65,152 +113,173 @@ func runAdd(opts AddOptions, with []string, withChanged bool) error {
 	if len(with) > 0 {
 		options["with"] = with
 	}
+	return options
+}
 
-	_, err := config.EnsureDir()
-	if err != nil {
-		return fmt.Errorf("create config dir: %w", err)
+// checkAliasConflict rejects an alias that shadows a package name or is already
+// bound to a different package.
+func checkAliasConflict(
+	cfg *config.Config,
+	aliasFlag types.PackageAlias,
+	pkg types.PackageName,
+) error {
+	if _, ok := cfg.Packages[types.PackageName(aliasFlag)]; ok {
+		return fmt.Errorf("alias %q conflicts with an existing package name", aliasFlag)
+	}
+	if existing, ok := cfg.Index[aliasFlag]; ok && existing != pkg {
+		return fmt.Errorf("alias %q already maps to %q", aliasFlag, existing)
+	}
+	return nil
+}
+
+// hasUpdate reports whether this invocation changes the existing entry at all.
+func (up addUpdate) hasUpdate(existing config.PackageEntry) bool {
+	return up.aliasFlag != "" ||
+		(up.version != "" && up.version != existing.Version) ||
+		up.featuresChanged || up.withChanged || len(up.options) > 0
+}
+
+// mergeEntry folds the invocation's version, features, and options into an
+// existing entry, returning whether anything changed. Option keys are merged
+// per-key: existing keys not mentioned here are preserved.
+func mergeEntry(existing config.PackageEntry, up addUpdate) (config.PackageEntry, bool) {
+	merged := existing
+	changed := false
+	if up.version != "" && up.version != existing.Version {
+		merged.Version = up.version
+		changed = true
+	}
+	if up.featuresChanged {
+		merged.Features = up.features
+		changed = true
+	}
+	if len(up.options) > 0 {
+		if merged.Options == nil {
+			merged.Options = make(map[string]any)
+		}
+		for k, v := range up.options {
+			merged.Options[k] = v
+		}
+		changed = true
+	}
+	return merged, changed
+}
+
+// installAndQueryVersion installs spec and returns the version the driver
+// reports afterwards, falling back to fallback when it cannot be determined.
+func installAndQueryVersion(
+	drv types.Driver,
+	spec types.PackageSpec,
+	fallback string,
+) (string, error) {
+	ctx := context.Background()
+	if err := drv.Install(ctx, spec); err != nil {
+		return "", err
+	}
+	if installed, err := drv.InstalledVersion(ctx, spec); err == nil && installed != "" {
+		return installed, nil
+	}
+	return fallback, nil
+}
+
+// updateExistingPackage applies an update to an already-registered package.
+func updateExistingPackage(
+	cfg *config.Config,
+	path string,
+	drv types.Driver,
+	up addUpdate,
+) error {
+	existing := cfg.Packages[up.pkg]
+	if up.mgr != existing.Manager {
+		return fmt.Errorf(
+			"package %q is managed by %q; run 'i remove %s' first to switch managers",
+			up.pkg,
+			existing.Manager,
+			up.pkg,
+		)
 	}
 
-	cfg, path, err := config.Read()
-	if err != nil {
-		return fmt.Errorf("read config: %w", err)
-	}
-
-	if aliasFlag != "" {
-		if _, ok := cfg.Packages[types.PackageName(aliasFlag)]; ok {
-			return fmt.Errorf("alias %q conflicts with an existing package name", aliasFlag)
-		}
-		if existing, ok := cfg.Index[aliasFlag]; ok && existing != pkg {
-			return fmt.Errorf("alias %q already maps to %q", aliasFlag, existing)
-		}
-	}
-
-	drv := manager.Lookup(string(mgr))
-	if drv == nil {
-		return fmt.Errorf("unknown manager %q", mgr)
-	}
-
-	if existing, exists := cfg.Packages[pkg]; exists {
-		if mgr != existing.Manager {
-			return fmt.Errorf(
-				"package %q is managed by %q; run 'i remove %s' first to switch managers",
-				pkg,
-				existing.Manager,
-				pkg,
-			)
-		}
-
-		hasUpdate := aliasFlag != "" ||
-			(version != "" && version != existing.Version) ||
-			opts.FeaturesChanged || withChanged || len(options) > 0
-		if !hasUpdate {
-			fmt.Printf("package %s already registered to %s\n", pkg, path)
-			return nil
-		}
-		// Additive: prior aliases pointing at pkg are kept. Many aliases may
-		// point at one package; `i alias remove` drops a single one.
-		if aliasFlag != "" {
-			cfg.Index[aliasFlag] = pkg
-		}
-
-		merged := existing
-		changed := false
-		if version != "" && version != existing.Version {
-			merged.Version = version
-			changed = true
-		}
-		if opts.FeaturesChanged {
-			merged.Features = features
-			changed = true
-		}
-		// Per-key merge: existing option keys are preserved; only keys present in
-		// this invocation are added or overwritten. There is no way to remove an
-		// option key via `add` today.
-		if len(options) > 0 {
-			if merged.Options == nil {
-				merged.Options = make(map[string]any)
-			}
-			for k, v := range options {
-				merged.Options[k] = v
-			}
-			changed = true
-		}
-
-		if changed {
-			spec := types.PackageSpec{
-				Name:     pkg,
-				Version:  merged.Version,
-				Manager:  mgr,
-				Features: merged.Features,
-				Options:  merged.Options,
-			}
-			if err := drv.Install(context.Background(), spec); err != nil {
-				return fmt.Errorf("install %s: %w", pkg, err)
-			}
-
-			if installedVer, err := drv.InstalledVersion(
-				context.Background(),
-				spec,
-			); err == nil && installedVer != "" {
-				merged.Version = installedVer
-			}
-			cfg.Packages[pkg] = merged
-		}
-
-		if _, err := config.Write(cfg); err != nil {
-			return fmt.Errorf("write config: %w", err)
-		}
-
-		if aliasFlag != "" {
-			fmt.Printf("updated alias %s -> %s (manager: %s) to %s\n", aliasFlag, pkg, mgr, path)
-		} else {
-			fmt.Printf("updated %s (manager: %s) to %s\n", pkg, mgr, path)
-		}
+	if !up.hasUpdate(existing) {
+		fmt.Printf("package %s already registered to %s\n", up.pkg, path)
 		return nil
 	}
 
-	spec := types.PackageSpec{
-		Name:     pkg,
-		Version:  version,
-		Manager:  mgr,
-		Features: features,
-		Options:  options,
+	// Additive: prior aliases pointing at pkg are kept. Many aliases may
+	// point at one package; `i alias remove` drops a single one.
+	if up.aliasFlag != "" {
+		cfg.Index[up.aliasFlag] = up.pkg
 	}
 
-	if err := drv.Install(context.Background(), spec); err != nil {
-		return fmt.Errorf("install %s: %w", pkg, err)
+	merged, changed := mergeEntry(existing, up)
+	if changed {
+		spec := specFromEntry(up.pkg, merged)
+		installed, err := installAndQueryVersion(drv, spec, merged.Version)
+		if err != nil {
+			return fmt.Errorf("install %s: %w", up.pkg, err)
+		}
+		merged.Version = installed
+		cfg.Packages[up.pkg] = merged
 	}
 
-	if installedVer, err := drv.InstalledVersion(
-		context.Background(),
-		spec,
-	); err == nil && installedVer != "" {
-		version = installedVer
+	if _, err := writeConfig(cfg); err != nil {
+		return err
 	}
 
-	entry := config.PackageEntry{
-		Manager:  mgr,
-		Version:  version,
-		Features: features,
-	}
-	if len(options) > 0 {
-		entry.Options = options
-	}
-	cfg.Packages[pkg] = entry
-
-	display := string(pkg)
-	if aliasFlag != "" {
-		cfg.Index[aliasFlag] = pkg
-		display = string(aliasFlag)
-	}
-
-	_, err = config.Write(cfg)
-	if err != nil {
-		return fmt.Errorf("write config: %w", err)
-	}
-
-	fmt.Printf("added %s (manager: %s, version: %s) to %s\n", display, mgr, version, path)
+	printAddResult(up, path)
 	return nil
+}
+
+// createNewPackage installs and registers a package that is not yet known.
+func createNewPackage(
+	cfg *config.Config,
+	path string,
+	drv types.Driver,
+	up addUpdate,
+) error {
+	entry := config.PackageEntry{
+		Manager:  up.mgr,
+		Version:  up.version,
+		Features: up.features,
+	}
+	if len(up.options) > 0 {
+		entry.Options = up.options
+	}
+
+	spec := specFromEntry(up.pkg, entry)
+	installed, err := installAndQueryVersion(drv, spec, up.version)
+	if err != nil {
+		return fmt.Errorf("install %s: %w", up.pkg, err)
+	}
+	entry.Version = installed
+	cfg.Packages[up.pkg] = entry
+
+	display := string(up.pkg)
+	if up.aliasFlag != "" {
+		cfg.Index[up.aliasFlag] = up.pkg
+		display = string(up.aliasFlag)
+	}
+
+	if _, err := writeConfig(cfg); err != nil {
+		return err
+	}
+
+	fmt.Printf("added %s (manager: %s, version: %s) to %s\n", display, up.mgr, entry.Version, path)
+	return nil
+}
+
+// printAddResult reports the outcome of updating an existing package.
+func printAddResult(up addUpdate, path string) {
+	if up.aliasFlag != "" {
+		fmt.Printf(
+			"updated alias %s -> %s (manager: %s) to %s\n",
+			up.aliasFlag,
+			up.pkg,
+			up.mgr,
+			path,
+		)
+		return
+	}
+	fmt.Printf("updated %s (manager: %s) to %s\n", up.pkg, up.mgr, path)
 }
 
 var addCmd = &cobra.Command{

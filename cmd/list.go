@@ -7,15 +7,13 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/lucidfrontier45/i/internal/config"
-	"github.com/lucidfrontier45/i/internal/types"
 	"github.com/spf13/cobra"
 )
 
 func runList() error {
-	cfg, _, err := config.Read()
+	cfg, _, err := readConfig()
 	if err != nil {
-		return fmt.Errorf("read config: %w", err)
+		return err
 	}
 
 	if len(cfg.Packages) == 0 {
@@ -31,35 +29,23 @@ func runList() error {
 		sort.Strings(aliases)
 	}
 
-	// Precompute manager per package name so the sort comparator avoids
-	// repeated map lookups. Output is grouped by manager then alphabetical.
-	managers := make(map[string]string, len(cfg.Packages))
-	names := make([]string, 0, len(cfg.Packages))
-	for name, entry := range cfg.Packages {
-		names = append(names, string(name))
-		managers[string(name)] = string(entry.Manager)
-	}
-	sort.Slice(names, func(i, j int) bool {
-		if managers[names[i]] != managers[names[j]] {
-			return managers[names[i]] < managers[names[j]]
-		}
-		return names[i] < names[j]
-	})
+	// Output is grouped by manager then alphabetical.
+	names := sortedNamesByManager(cfg.Packages)
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	_, _ = fmt.Fprintln(w, "Package\tManager\tVersion\tAlias")
 	_, _ = fmt.Fprintln(w, "-------\t-------\t-------\t-----")
 	for _, name := range names {
-		entry := cfg.Packages[types.PackageName(name)]
+		entry := cfg.Packages[name]
 		version := entry.Version
 		if version == "" {
 			version = "latest"
 		}
-		alias := strings.Join(byPkg[name], ", ")
+		alias := strings.Join(byPkg[string(name)], ", ")
 		_, _ = fmt.Fprintf(
 			w,
 			"%s\t%s\t%s\t%s\n",
-			name,
+			string(name),
 			string(entry.Manager),
 			version,
 			alias,

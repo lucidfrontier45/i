@@ -19,36 +19,19 @@ func (n *npmDriver) Name() string {
 }
 
 func (n *npmDriver) Install(ctx context.Context, spec types.PackageSpec) error {
-	args := []string{"install", "-g"}
-	if spec.Version != "" {
-		args = append(args, string(spec.Name)+"@"+spec.Version)
-	} else {
-		args = append(args, string(spec.Name))
-	}
-	if force, ok := spec.Options["force"].(bool); ok && force {
+	args := []string{"install", "-g", pinVersion(string(spec.Name), spec.Version)}
+	if forceOption(spec.Options) {
 		args = append(args, "--force")
 	}
-	out, err := cmdOutput(ctx, "npm", args...)
-	if err != nil {
-		return fmt.Errorf("npm install: %w\n%s", err, string(out))
-	}
-	return nil
+	return runTool(ctx, "npm", "install", args...)
 }
 
 func (n *npmDriver) Upgrade(ctx context.Context, spec types.PackageSpec) error {
-	out, err := cmdOutput(ctx, "npm", "install", "-g", string(spec.Name)+"@latest")
-	if err != nil {
-		return fmt.Errorf("npm upgrade: %w\n%s", err, string(out))
-	}
-	return nil
+	return runTool(ctx, "npm", "upgrade", "install", "-g", string(spec.Name)+"@latest")
 }
 
 func (n *npmDriver) Remove(ctx context.Context, spec types.PackageSpec) error {
-	out, err := cmdOutput(ctx, "npm", "uninstall", "-g", string(spec.Name))
-	if err != nil {
-		return fmt.Errorf("npm uninstall: %w\n%s", err, string(out))
-	}
-	return nil
+	return runTool(ctx, "npm", "uninstall", "uninstall", "-g", string(spec.Name))
 }
 
 func (n *npmDriver) InstalledVersion(ctx context.Context, spec types.PackageSpec) (string, error) {

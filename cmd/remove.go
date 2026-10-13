@@ -4,28 +4,25 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/lucidfrontier45/i/internal/config"
-	"github.com/lucidfrontier45/i/internal/manager"
 	"github.com/lucidfrontier45/i/internal/types"
 	"github.com/spf13/cobra"
 )
 
 func runRemove(key string) error {
-	cfg, path, err := config.Read()
+	cfg, path, err := readConfig()
 	if err != nil {
-		return fmt.Errorf("read config: %w", err)
+		return err
 	}
 
-	full := cfg.ResolveName(key)
-	entry, ok := cfg.Packages[full]
-	if !ok {
-		return fmt.Errorf("package %q not found in config", key)
+	full, entry, err := requirePackage(cfg, key)
+	if err != nil {
+		return err
 	}
 
 	fmt.Printf("uninstalling %s (%s@%s)...\n", full, entry.Manager, entry.Version)
-	drv := manager.Lookup(string(entry.Manager))
-	if drv == nil {
-		return fmt.Errorf("unknown manager %q", entry.Manager)
+	drv, err := lookupDriver(entry.Manager)
+	if err != nil {
+		return err
 	}
 	spec := types.PackageSpec{
 		Name:    full,
@@ -43,9 +40,8 @@ func runRemove(key string) error {
 		}
 	}
 
-	_, err = config.Write(cfg)
-	if err != nil {
-		return fmt.Errorf("write config: %w", err)
+	if _, err := writeConfig(cfg); err != nil {
+		return err
 	}
 
 	fmt.Printf("removed %s from %s\n", key, path)

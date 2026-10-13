@@ -57,7 +57,7 @@ func SelfUpdate(ctx context.Context, repo, currentVersion string) (string, error
 
 	latestVersion := strings.TrimPrefix(rel.TagName, "v")
 
-	if currentVersion != "dev" && compareVersions(currentVersion, rel.TagName) >= 0 {
+	if currentVersion != "dev" && CompareVersions(currentVersion, rel.TagName) >= 0 {
 		return "", ErrUpToDate
 	}
 
@@ -161,46 +161,17 @@ func writeTempFile(dir string, data []byte) (string, error) {
 
 // LatestRelease returns the latest non-prerelease of repo from the GitHub API.
 func LatestRelease(ctx context.Context, repo string) (*Release, error) {
-	req, err := http.NewRequestWithContext(
-		ctx,
-		http.MethodGet,
-		githubAPI+repo+"/releases/latest",
-		nil,
-	)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/vnd.github+json")
-
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf(
-			"github api returned %s",
-			resp.Status,
-		)
-	}
-
-	var rel Release
-	if err := json.NewDecoder(resp.Body).Decode(&rel); err != nil {
-		return nil, err
-	}
-	return &rel, nil
+	return fetchRelease(ctx, githubAPI+repo+"/releases/latest")
 }
 
 // ReleaseByTag returns the release with the given tag from the GitHub API.
 func ReleaseByTag(ctx context.Context, repo, tag string) (*Release, error) {
-	req, err := http.NewRequestWithContext(
-		ctx,
-		http.MethodGet,
-		githubAPI+repo+"/releases/tags/"+tag,
-		nil,
-	)
+	return fetchRelease(ctx, githubAPI+repo+"/releases/tags/"+tag)
+}
+
+// fetchRelease GETs the given GitHub API URL and decodes a Release.
+func fetchRelease(ctx context.Context, url string) (*Release, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -214,10 +185,7 @@ func ReleaseByTag(ctx context.Context, repo, tag string) (*Release, error) {
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf(
-			"github api returned %s",
-			resp.Status,
-		)
+		return nil, fmt.Errorf("github api returned %s", resp.Status)
 	}
 
 	var rel Release
@@ -328,9 +296,9 @@ func parseChecksum(text, name string) (string, bool) {
 	return "", false
 }
 
-// compareVersions compares two versions using semver. Missing "v" prefixes are
+// CompareVersions compares two versions using semver. Missing "v" prefixes are
 // added; the result is -1, 0, or 1 (a < b, a == b, a > b).
-func compareVersions(a, b string) int {
+func CompareVersions(a, b string) int {
 	return semver.Compare(normalizeSemver(a), normalizeSemver(b))
 }
 
