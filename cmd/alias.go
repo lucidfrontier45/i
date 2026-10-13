@@ -102,7 +102,7 @@ func printAliasSetResult(
 	exists bool,
 ) {
 	if exists {
-		fmt.Printf("re-pointed alias %s: %q -> %q\n", path, previous, pkg)
+		fmt.Printf("re-pointed alias %s: %q -> %q\n", aliasKey, previous, pkg)
 		return
 	}
 	fmt.Printf("set alias %s = %q in %s\n", aliasKey, pkg, path)
