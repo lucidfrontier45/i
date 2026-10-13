@@ -42,13 +42,9 @@ type Release struct {
 // already the latest, it returns ("", ErrUpToDate) without touching the binary.
 // On success it returns the version that was installed.
 func SelfUpdate(ctx context.Context, repo, currentVersion string) (string, error) {
-	exe, err := os.Executable()
+	exe, err := resolveExecutable()
 	if err != nil {
-		return "", fmt.Errorf("locate executable: %w", err)
-	}
-	exe, err = filepath.EvalSymlinks(exe)
-	if err != nil {
-		return "", fmt.Errorf("resolve executable: %w", err)
+		return "", err
 	}
 
 	// Best-effort cleanup of a previous run's leftover on Windows.
@@ -61,10 +57,8 @@ func SelfUpdate(ctx context.Context, repo, currentVersion string) (string, error
 
 	latestVersion := strings.TrimPrefix(rel.TagName, "v")
 
-	if currentVersion != "dev" {
-		if c := compareVersions(currentVersion, rel.TagName); c >= 0 {
-			return "", ErrUpToDate
-		}
+	if currentVersion != "dev" && compareVersions(currentVersion, rel.TagName) >= 0 {
+		return "", ErrUpToDate
 	}
 
 	name := assetName(latestVersion)
@@ -78,42 +72,91 @@ func SelfUpdate(ctx context.Context, repo, currentVersion string) (string, error
 		)
 	}
 
+	data, err := downloadAndVerify(ctx, repo, rel.TagName, name, downloadURL)
+	if err != nil {
+		return "", err
+	}
+
+	if err := installExecutable(exe, data); err != nil {
+		return "", err
+	}
+
+	return latestVersion, nil
+}
+
+// resolveExecutable returns the symlink-resolved path of the running executable.
+func resolveExecutable() (string, error) {
+	exe, err := os.Executable()
+	if err != nil {
+		return "", fmt.Errorf("locate executable: %w", err)
+	}
+	exe, err = filepath.EvalSymlinks(exe)
+	if err != nil {
+		return "", fmt.Errorf("resolve executable: %w", err)
+	}
+	return exe, nil
+}
+
+// downloadAndVerify downloads the named asset and checks its SHA256 against the
+// release's checksums.txt.
+func downloadAndVerify(
+	ctx context.Context,
+	repo, tag, name, downloadURL string,
+) ([]byte, error) {
 	fmt.Printf("downloading %s...\n", downloadURL)
 	data, err := DownloadURL(ctx, downloadURL)
 	if err != nil {
-		return "", fmt.Errorf("download %s: %w", name, err)
+		return nil, fmt.Errorf("download %s: %w", name, err)
 	}
 
-	if err := verifyChecksum(ctx, repo, rel.TagName, name, data); err != nil {
-		return "", fmt.Errorf("checksum %s: %w", name, err)
+	if err := verifyChecksum(ctx, repo, tag, name, data); err != nil {
+		return nil, fmt.Errorf("checksum %s: %w", name, err)
 	}
+	return data, nil
+}
 
-	tmp, err := os.CreateTemp(filepath.Dir(exe), ".i-update-*")
+// installExecutable writes data to a temp file next to exe and atomically
+// replaces exe with it.
+func installExecutable(exe string, data []byte) error {
+	tmpPath, err := writeTempFile(filepath.Dir(exe), data)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = os.Remove(tmpPath) }()
+
+	if err := replaceExecutable(exe, tmpPath); err != nil {
+		return fmt.Errorf("replace executable: %w", err)
+	}
+	return nil
+}
+
+// writeTempFile creates a temp file in dir containing data and returns its path.
+// On non-Windows platforms the file is marked executable. The file is removed
+// on any error.
+func writeTempFile(dir string, data []byte) (string, error) {
+	tmp, err := os.CreateTemp(dir, ".i-update-*")
 	if err != nil {
 		return "", fmt.Errorf("create temp file: %w", err)
 	}
 	tmpPath := tmp.Name()
-	defer func() { _ = os.Remove(tmpPath) }()
 
 	if _, err := tmp.Write(data); err != nil {
 		_ = tmp.Close()
+		_ = os.Remove(tmpPath)
 		return "", fmt.Errorf("write temp file: %w", err)
 	}
 	if err := tmp.Close(); err != nil {
+		_ = os.Remove(tmpPath)
 		return "", fmt.Errorf("close temp file: %w", err)
 	}
 
 	if runtime.GOOS != "windows" {
 		if err := os.Chmod(tmpPath, 0o755); err != nil {
+			_ = os.Remove(tmpPath)
 			return "", fmt.Errorf("chmod temp file: %w", err)
 		}
 	}
-
-	if err := replaceExecutable(exe, tmpPath); err != nil {
-		return "", fmt.Errorf("replace executable: %w", err)
-	}
-
-	return latestVersion, nil
+	return tmpPath, nil
 }
 
 // LatestRelease returns the latest non-prerelease of repo from the GitHub API.

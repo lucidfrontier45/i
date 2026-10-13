@@ -24,50 +24,13 @@ func runSync(force bool) error {
 
 	hasError := false
 	needsWrite := false
-	names := make([]string, 0, len(cfg.Packages))
-	for n := range cfg.Packages {
-		names = append(names, string(n))
-	}
-	sort.Strings(names)
-	for _, n := range names {
-		name := types.PackageName(n)
-		entry := cfg.Packages[name]
-		fmt.Printf("syncing %s (%s@%s)...\n", name, entry.Manager, entry.Version)
-
-		drv := manager.Lookup(string(entry.Manager))
-		if drv == nil {
-			fmt.Printf("error: unknown manager %q\n", entry.Manager)
+	for _, name := range sortedNames(cfg.Packages) {
+		changed, err := syncPackage(cfg, name, force)
+		if err != nil {
 			hasError = true
 			continue
 		}
-
-		options := entry.Options
-		if force {
-			options = copyOptions(options)
-			options["force"] = true
-		}
-
-		spec := types.PackageSpec{
-			Name:     name,
-			Version:  entry.Version,
-			Manager:  entry.Manager,
-			Features: entry.Features,
-			Options:  options,
-		}
-
-		if err := drv.Install(context.Background(), spec); err != nil {
-			fmt.Printf("error syncing %s: %v\n", name, err)
-			hasError = true
-			continue
-		}
-
-		if installedVer, err := drv.InstalledVersion(
-			context.Background(),
-			spec,
-		); err == nil && installedVer != "" &&
-			installedVer != entry.Version {
-			entry.Version = installedVer
-			cfg.Packages[name] = entry
+		if changed {
 			needsWrite = true
 		}
 	}
@@ -83,6 +46,78 @@ func runSync(force bool) error {
 	}
 
 	return nil
+}
+
+// syncPackage installs a single registered package and refreshes its recorded
+// version, returning whether the config entry changed. A non-nil error means the
+// package failed; the reason is already printed to the user.
+func syncPackage(
+	cfg *config.Config,
+	name types.PackageName,
+	force bool,
+) (bool, error) {
+	entry := cfg.Packages[name]
+	fmt.Printf("syncing %s (%s@%s)...\n", name, entry.Manager, entry.Version)
+
+	drv := manager.Lookup(string(entry.Manager))
+	if drv == nil {
+		fmt.Printf("error: unknown manager %q\n", entry.Manager)
+		return false, fmt.Errorf("unknown manager %q", entry.Manager)
+	}
+
+	spec := specFromEntry(name, entry)
+	if force {
+		spec.Options = copyOptions(spec.Options)
+		spec.Options["force"] = true
+	}
+
+	if err := drv.Install(context.Background(), spec); err != nil {
+		fmt.Printf("error syncing %s: %v\n", name, err)
+		return false, err
+	}
+
+	updated, ok := refreshInstalledVersion(drv, spec, entry)
+	if !ok {
+		return false, nil
+	}
+	cfg.Packages[name] = updated
+	return true, nil
+}
+
+// refreshInstalledVersion re-queries the driver for the actually installed
+// version and reports the updated entry when it differs from the recorded one.
+func refreshInstalledVersion(
+	drv types.Driver,
+	spec types.PackageSpec,
+	entry config.PackageEntry,
+) (config.PackageEntry, bool) {
+	installedVer, err := drv.InstalledVersion(context.Background(), spec)
+	if err != nil || installedVer == "" || installedVer == entry.Version {
+		return entry, false
+	}
+	entry.Version = installedVer
+	return entry, true
+}
+
+// sortedNames returns the registered package names in ascending order.
+func sortedNames(pkgs map[types.PackageName]config.PackageEntry) []types.PackageName {
+	names := make([]types.PackageName, 0, len(pkgs))
+	for n := range pkgs {
+		names = append(names, n)
+	}
+	sort.Slice(names, func(i, j int) bool { return names[i] < names[j] })
+	return names
+}
+
+// specFromEntry builds the install spec for a registered package entry.
+func specFromEntry(name types.PackageName, entry config.PackageEntry) types.PackageSpec {
+	return types.PackageSpec{
+		Name:     name,
+		Version:  entry.Version,
+		Manager:  entry.Manager,
+		Features: entry.Features,
+		Options:  entry.Options,
+	}
 }
 
 var syncCmd = &cobra.Command{

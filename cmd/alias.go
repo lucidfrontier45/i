@@ -26,32 +26,14 @@ func runAliasSet(alias, pkgKey string, force bool) error {
 
 	aliasKey := types.PackageAlias(alias)
 	pkg := cfg.ResolveName(pkgKey)
-	if _, ok := cfg.Packages[pkg]; !ok {
-		return fmt.Errorf("package %q not found in config", pkgKey)
-	}
-
-	if string(aliasKey) == string(pkg) {
-		return fmt.Errorf(
-			"alias %q is redundant; the package is already addressable by name",
-			aliasKey,
-		)
-	}
-
-	if _, ok := cfg.Packages[types.PackageName(aliasKey)]; ok {
-		return fmt.Errorf("alias %q conflicts with an existing package name", aliasKey)
+	if err := checkAliasTarget(cfg, aliasKey, pkg, pkgKey); err != nil {
+		return err
 	}
 
 	previous, exists := cfg.Index[aliasKey]
-	switch {
-	case exists && previous == pkg:
-		fmt.Printf("alias %q already maps to %q\n", aliasKey, pkg)
-		return nil
-	case exists && !force:
-		return fmt.Errorf(
-			"alias %q already maps to %q; pass --force to re-point it",
-			aliasKey,
-			previous,
-		)
+	proceed, err := checkAliasRepoint(aliasKey, pkg, previous, exists, force)
+	if err != nil || !proceed {
+		return err
 	}
 
 	cfg.Index[aliasKey] = pkg
@@ -60,12 +42,70 @@ func runAliasSet(alias, pkgKey string, force bool) error {
 		return fmt.Errorf("write config: %w", err)
 	}
 
-	if exists {
-		fmt.Printf("re-pointed alias %s: %q -> %q\n", path, previous, pkg)
-	} else {
-		fmt.Printf("set alias %s = %q in %s\n", aliasKey, pkg, path)
+	printAliasSetResult(aliasKey, pkg, previous, path, exists)
+	return nil
+}
+
+// checkAliasTarget validates that aliasKey may point at pkg.
+func checkAliasTarget(
+	cfg *config.Config,
+	aliasKey types.PackageAlias,
+	pkg types.PackageName,
+	pkgKey string,
+) error {
+	if _, ok := cfg.Packages[pkg]; !ok {
+		return fmt.Errorf("package %q not found in config", pkgKey)
+	}
+	if string(aliasKey) == string(pkg) {
+		return fmt.Errorf(
+			"alias %q is redundant; the package is already addressable by name",
+			aliasKey,
+		)
+	}
+	if _, ok := cfg.Packages[types.PackageName(aliasKey)]; ok {
+		return fmt.Errorf("alias %q conflicts with an existing package name", aliasKey)
 	}
 	return nil
+}
+
+// checkAliasRepoint decides whether aliasKey may be (re)pointed at pkg. It
+// returns proceed=false with a nil error when the alias already maps to pkg
+// (a no-op), and an error when re-pointing is not allowed.
+func checkAliasRepoint(
+	aliasKey types.PackageAlias,
+	pkg types.PackageName,
+	previous types.PackageName,
+	exists, force bool,
+) (bool, error) {
+	if !exists {
+		return true, nil
+	}
+	if previous == pkg {
+		fmt.Printf("alias %q already maps to %q\n", aliasKey, pkg)
+		return false, nil
+	}
+	if !force {
+		return false, fmt.Errorf(
+			"alias %q already maps to %q; pass --force to re-point it",
+			aliasKey,
+			previous,
+		)
+	}
+	return true, nil
+}
+
+// printAliasSetResult reports the outcome of setting an alias.
+func printAliasSetResult(
+	aliasKey types.PackageAlias,
+	pkg, previous types.PackageName,
+	path string,
+	exists bool,
+) {
+	if exists {
+		fmt.Printf("re-pointed alias %s: %q -> %q\n", aliasKey, previous, pkg)
+		return
+	}
+	fmt.Printf("set alias %s = %q in %s\n", aliasKey, pkg, path)
 }
 
 // runAliasList prints every alias paired with its full package name.
