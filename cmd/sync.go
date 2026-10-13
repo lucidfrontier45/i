@@ -10,20 +10,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func runSync(force bool) error {
-	cfg, _, err := readConfig()
+func runSync(force bool, keys []string) error {
+	cfg, names, ok, err := loadTargets(keys)
 	if err != nil {
 		return err
 	}
-
-	if len(cfg.Packages) == 0 {
-		fmt.Println("no packages registered")
+	if !ok {
 		return nil
 	}
 
 	hasError := false
 	needsWrite := false
-	for _, name := range sortedNames(cfg.Packages) {
+	for _, name := range names {
 		changed, err := syncPackage(cfg, name, force)
 		if err != nil {
 			hasError = true
@@ -139,12 +137,12 @@ func specFromEntry(name types.PackageName, entry config.PackageEntry) types.Pack
 }
 
 var syncCmd = &cobra.Command{
-	Use:   "sync",
-	Short: "Install all registered packages at their specified versions",
-	Args:  cobra.NoArgs,
-	RunE: func(cmd *cobra.Command, _ []string) error {
+	Use:   "sync [package...]",
+	Short: "Install registered packages at their specified versions",
+	Args:  cobra.ArbitraryArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
 		force, _ := cmd.Flags().GetBool("force")
-		return runSync(force)
+		return runSync(force, args)
 	},
 }
 
