@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/lucidfrontier45/i/internal/config"
@@ -51,7 +52,7 @@ func runAdd(opts AddOptions, with []string, withChanged bool) error {
 	}
 
 	if up.aliasFlag != "" {
-		if err := checkAliasConflict(cfg, up.aliasFlag, up.pkg); err != nil {
+		if err := aliasConflict(cfg, up.aliasFlag, up.pkg); err != nil {
 			return err
 		}
 	}
@@ -93,9 +94,10 @@ func deriveAlias(mgr types.ManagerType, pkg types.PackageName) (types.PackageAli
 }
 
 // applyAutoAlias fills in the manager's shorthand alias (see deriveAlias)
-// when no --alias was given and the derived name is free: it must not shadow
-// a registered package or an alias bound to a different package. Collisions
-// are skipped silently so a naming clash never fails an install.
+// when no --alias was given and the derived name is free. A derived name is
+// never overwritten or stolen: if it is already used by another package or
+// bound to a different package, the alias is skipped with a note on stderr
+// so a naming clash never fails an install.
 func (up *addUpdate) applyAutoAlias(cfg *config.Config) {
 	if up.aliasFlag != "" {
 		return
@@ -104,10 +106,8 @@ func (up *addUpdate) applyAutoAlias(cfg *config.Config) {
 	if !ok {
 		return
 	}
-	if _, taken := cfg.Packages[types.PackageName(derived)]; taken {
-		return
-	}
-	if mapped, exists := cfg.Index[derived]; exists && mapped != up.pkg {
+	if err := aliasConflict(cfg, derived, up.pkg); err != nil {
+		fmt.Fprintf(os.Stderr, "note: skipping auto alias %s: %v\n", derived, err)
 		return
 	}
 	up.aliasFlag = derived
@@ -162,18 +162,16 @@ func buildAddOptions(opts AddOptions, with []string) map[string]any {
 	return options
 }
 
-// checkAliasConflict rejects an alias that shadows a package name or is already
-// bound to a different package.
-func checkAliasConflict(
-	cfg *config.Config,
-	aliasFlag types.PackageAlias,
-	pkg types.PackageName,
-) error {
-	if _, ok := cfg.Packages[types.PackageName(aliasFlag)]; ok {
-		return fmt.Errorf("alias %q conflicts with an existing package name", aliasFlag)
+// aliasConflict reports why alias cannot name pkg, or nil when it is free:
+// alias must not shadow a registered package name and must not already be
+// bound to a different package. The explicit --alias path surfaces these as
+// hard errors; the auto-alias path treats a non-nil result as a skip signal.
+func aliasConflict(cfg *config.Config, alias types.PackageAlias, pkg types.PackageName) error {
+	if _, ok := cfg.Packages[types.PackageName(alias)]; ok {
+		return fmt.Errorf("alias %q conflicts with an existing package name", alias)
 	}
-	if existing, ok := cfg.Index[aliasFlag]; ok && existing != pkg {
-		return fmt.Errorf("alias %q already maps to %q", aliasFlag, existing)
+	if existing, ok := cfg.Index[alias]; ok && existing != pkg {
+		return fmt.Errorf("alias %q already maps to %q", alias, existing)
 	}
 	return nil
 }

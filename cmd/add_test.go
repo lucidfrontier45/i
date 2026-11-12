@@ -157,3 +157,49 @@ func TestApplyAutoAlias(t *testing.T) {
 		})
 	}
 }
+
+func TestAliasConflict(t *testing.T) {
+	cfg := autoAliasConfig()
+
+	tests := []struct {
+		name    string
+		alias   types.PackageAlias
+		pkg     types.PackageName
+		wantErr bool
+	}{
+		{
+			name:  "free alias is available",
+			alias: "repo",
+			pkg:   "owner/repo",
+		},
+		{
+			name:  "alias bound to the same package is not a conflict",
+			alias: "grep",
+			pkg:   "ripgrep",
+		},
+		{
+			name:    "alias bound to another package conflicts",
+			alias:   "grep",
+			pkg:     "owner/grep",
+			wantErr: true,
+		},
+		{
+			name:    "alias shadowing a package name conflicts",
+			alias:   "ripgrep",
+			pkg:     "owner/ripgrep",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := aliasConflict(cfg, tt.alias, tt.pkg)
+			if tt.wantErr && err == nil {
+				t.Fatalf("aliasConflict(%s, %s) = nil, want error", tt.alias, tt.pkg)
+			}
+			if !tt.wantErr && err != nil {
+				t.Fatalf("aliasConflict(%s, %s): unexpected error: %v", tt.alias, tt.pkg, err)
+			}
+		})
+	}
+}
