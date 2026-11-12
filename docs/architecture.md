@@ -123,8 +123,10 @@ The `self-upgrade` command downloads the latest GitHub release, verifies the SHA
 
 3. **Config as source of truth** — the TOML file is both registry and desired-state manifest. `sync` is a declarative install-all.
 
-4. **No tests** — the project has no `*_test.go` files across any package.
+4. **Minimal tests** — table-driven unit tests cover only the pure `cmd/` helpers (`cmd/helpers_test.go`, `cmd/add_test.go`); drivers and the config layer stay untested.
 
 5. **Many aliases per package** — `Index` is many-to-one, not a 1:1 rename. `add -a` and `i alias set` both add without clearing prior aliases; `i alias remove <alias>` drops one, and `i remove <pkg>` sweeps them all. An alias may not shadow a registered package name, and re-pointing an existing alias requires `--force` so a shorthand is never silently moved onto a different package.
 
-6. **Dependencies** — only three external modules: `BurntSushi/toml` (config), `spf13/cobra` (CLI), `golang.org/x/mod` (semver comparison in self-update).
+6. **Derived aliases at add time** — when registering a new package whose name contains a `/` under `grd`, `npm`, or `bun`, the segment after the last `/` is added as an alias automatically (`owner/repo` → `repo`, `@scope/pkg` → `pkg`). An explicit `--alias` wins; a derived name that would shadow a registered package or an alias bound to a different package is skipped with a note on stderr (an existing alias is never re-pointed), and re-adding an existing package never grows new aliases.
+
+7. **Dependencies** — only three external modules: `BurntSushi/toml` (config), `spf13/cobra` (CLI), `golang.org/x/mod` (semver comparison in self-update).
