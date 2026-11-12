@@ -60,6 +60,12 @@ i upgrade mypkg
 i remove mypkg
 ```
 
+For `grd`, `npm`, and `bun`, a name containing a `/` also gets a shorthand
+alias for free: the segment after the last `/`. `i add neovim/neovim --manager
+grd` is addressable as `neovim`, and `@user/package` as `package`. An explicit
+`--alias` always wins, and an auto-alias that would shadow an existing package
+or alias is skipped.
+
 A package may have several aliases at once; `--alias` adds one and keeps the
 others. Manage them after the fact with `i alias`, which edits config only and
 never reinstalls the package:

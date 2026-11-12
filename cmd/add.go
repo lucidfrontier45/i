@@ -64,7 +64,53 @@ func runAdd(opts AddOptions, with []string, withChanged bool) error {
 	if _, exists := cfg.Packages[up.pkg]; exists {
 		return updateExistingPackage(cfg, path, drv, up)
 	}
+	// Auto-aliasing applies only to first-time registration; re-adding an
+	// existing package never grows new aliases.
+	up.applyAutoAlias(cfg)
 	return createNewPackage(cfg, path, drv, up)
+}
+
+// deriveAlias returns the shorthand a package name maps to under the given
+// manager: the repo name for grd "owner/repo" entries and the unqualified
+// name for npm/bun scoped "@scope/name" packages. ok is false when the
+// manager has no shorthand rule or the name has no "/" segment.
+func deriveAlias(mgr types.ManagerType, pkg types.PackageName) (types.PackageAlias, bool) {
+	switch mgr {
+	case types.ManagerGrd, types.ManagerNpm, types.ManagerBun:
+	default:
+		return "", false
+	}
+	name := string(pkg)
+	idx := strings.LastIndexByte(name, '/')
+	if idx == -1 {
+		return "", false
+	}
+	short := name[idx+1:]
+	if short == "" {
+		return "", false
+	}
+	return types.PackageAlias(short), true
+}
+
+// applyAutoAlias fills in the manager's shorthand alias (see deriveAlias)
+// when no --alias was given and the derived name is free: it must not shadow
+// a registered package or an alias bound to a different package. Collisions
+// are skipped silently so a naming clash never fails an install.
+func (up *addUpdate) applyAutoAlias(cfg *config.Config) {
+	if up.aliasFlag != "" {
+		return
+	}
+	derived, ok := deriveAlias(up.mgr, up.pkg)
+	if !ok {
+		return
+	}
+	if _, taken := cfg.Packages[types.PackageName(derived)]; taken {
+		return
+	}
+	if mapped, exists := cfg.Index[derived]; exists && mapped != up.pkg {
+		return
+	}
+	up.aliasFlag = derived
 }
 
 // parseAddRequest validates the CLI inputs and resolves them into an addUpdate.
